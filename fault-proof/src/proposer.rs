@@ -228,7 +228,9 @@ where
                 .network_prover
                 .prove(&self.prover.range_pk, &sp1_stdin)
                 .compressed()
-                .strategy(FulfillmentStrategy::Hosted)
+                // TODO: implement feature flag.
+                .strategy(FulfillmentStrategy::Auction)
+                .max_price_per_pgu(self.config.max_price_per_pgu)
                 .skip_simulation(true)
                 .cycle_limit(1_000_000_000_000)
                 .run_async()
@@ -289,6 +291,9 @@ where
             self.prover
                 .network_prover
                 .prove(&self.prover.agg_pk, &sp1_stdin)
+                // TODO: implement feature flag.
+                .strategy(FulfillmentStrategy::Auction)
+                .max_price_per_pgu(self.config.max_price_per_pgu)
                 .groth16()
                 .run_async()
                 .await?
