@@ -45,7 +45,7 @@ cargo prove build --output-directory ../../../elf --elf-name celestia-range-elf-
 
 # Build the aggregation-elf
 cd ../../aggregation
-cargo prove build --output-directory ../../../elf --elf-name aggregation-elf --docker --tag v5.2.1
+cargo prove build --output-directory ../../elf --elf-name aggregation-elf --docker --tag v5.2.1
 ```
 
 Now, you can verify the binaries. The `config` script outputs the rollup config hash, aggregation verification key, and range verification key commitment based on the ELFs in `/elf`.
