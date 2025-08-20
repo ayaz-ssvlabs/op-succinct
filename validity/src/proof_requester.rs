@@ -9,8 +9,8 @@ use op_succinct_host_utils::{
 };
 use op_succinct_proof_utils::get_range_elf_embedded;
 use sp1_sdk::{
-    network::{proto::network::ExecutionStatus, FulfillmentStrategy},
-    NetworkProver, SP1Proof, SP1ProofMode, SP1ProofWithPublicValues, SP1Stdin, SP1_CIRCUIT_VERSION,
+    network::proto::network::ExecutionStatus,
+    CudaProver, SP1Proof, SP1ProofMode, SP1ProofWithPublicValues, SP1Stdin, SP1_CIRCUIT_VERSION,
 };
 use std::{sync::Arc, time::Instant};
 use tracing::{info, warn};
@@ -22,40 +22,34 @@ use crate::{
 
 pub struct OPSuccinctProofRequester<H: OPSuccinctHost> {
     pub host: Arc<H>,
-    pub network_prover: Arc<NetworkProver>,
+    pub cuda_prover: Arc<CudaProver>,
     pub fetcher: Arc<OPSuccinctDataFetcher>,
     pub db_client: Arc<DriverDBClient>,
     pub program_config: ProgramConfig,
     pub mock: bool,
-    pub range_strategy: FulfillmentStrategy,
-    pub agg_strategy: FulfillmentStrategy,
+    // Note: range_strategy and agg_strategy are not used in CUDA mode (synchronous)
     pub agg_mode: SP1ProofMode,
     pub safe_db_fallback: bool,
 }
 
 impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         host: Arc<H>,
-        network_prover: Arc<NetworkProver>,
+        cuda_prover: Arc<CudaProver>,
         fetcher: Arc<OPSuccinctDataFetcher>,
         db_client: Arc<DriverDBClient>,
         program_config: ProgramConfig,
         mock: bool,
-        range_strategy: FulfillmentStrategy,
-        agg_strategy: FulfillmentStrategy,
         agg_mode: SP1ProofMode,
         safe_db_fallback: bool,
     ) -> Self {
         Self {
             host,
-            network_prover,
+            cuda_prover,
             fetcher,
             db_client,
             program_config,
             mock,
-            range_strategy,
-            agg_strategy,
             agg_mode,
             safe_db_fallback,
         }
@@ -143,46 +137,40 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
         Ok(stdin)
     }
 
-    /// Requests a range proof via the network prover.
-    pub async fn request_range_proof(&self, stdin: SP1Stdin) -> Result<B256> {
-        let proof_id = match self
-            .network_prover
+    /// Generates a range proof synchronously via the CUDA prover.
+    pub async fn generate_range_proof(&self, stdin: SP1Stdin) -> Result<SP1ProofWithPublicValues> {
+        let proof = match self
+            .cuda_prover
             .prove(&self.program_config.range_pk, &stdin)
             .compressed()
-            .strategy(self.range_strategy)
-            .skip_simulation(true)
-            .cycle_limit(1_000_000_000_000)
-            .request_async()
-            .await
+            .run()
         {
-            Ok(proof_id) => proof_id,
+            Ok(proof) => proof,
             Err(e) => {
                 ValidityGauge::RangeProofRequestErrorCount.increment(1.0);
                 return Err(e);
             }
         };
 
-        Ok(proof_id)
+        Ok(proof)
     }
 
-    /// Requests an aggregation proof via the network prover.
-    pub async fn request_agg_proof(&self, stdin: SP1Stdin) -> Result<B256> {
-        let proof_id = match self
-            .network_prover
+    /// Generates an aggregation proof synchronously via the CUDA prover.
+    pub async fn generate_agg_proof(&self, stdin: SP1Stdin) -> Result<SP1ProofWithPublicValues> {
+        let proof = match self
+            .cuda_prover
             .prove(&self.program_config.agg_pk, &stdin)
             .mode(self.agg_mode)
-            .strategy(self.agg_strategy)
-            .request_async()
-            .await
+            .run()
         {
-            Ok(proof_id) => proof_id,
+            Ok(proof) => proof,
             Err(e) => {
                 ValidityGauge::AggProofRequestErrorCount.increment(1.0);
                 return Err(e);
             }
         };
 
-        Ok(proof_id)
+        Ok(proof)
     }
 
     /// Generates a mock range proof and writes the execution statistics to the database.
@@ -200,10 +188,10 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
         );
 
         let start_time = Instant::now();
-        let network_prover = self.network_prover.clone();
+        let cuda_prover = self.cuda_prover.clone();
         // Move the CPU-intensive operation to a dedicated thread.
         let (pv, report) = match tokio::task::spawn_blocking(move || {
-            network_prover.execute(get_range_elf_embedded(), &stdin).run()
+            cuda_prover.execute(get_range_elf_embedded(), &stdin).run()
         })
         .await?
         {
@@ -251,10 +239,10 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
         stdin: SP1Stdin,
     ) -> Result<SP1ProofWithPublicValues> {
         let start_time = Instant::now();
-        let network_prover = self.network_prover.clone();
+        let cuda_prover = self.cuda_prover.clone();
         // Move the CPU-intensive operation to a dedicated thread.
         let (pv, report) = match tokio::task::spawn_blocking(move || {
-            network_prover.execute(AGGREGATION_ELF, &stdin).deferred_proof_verification(false).run()
+            cuda_prover.execute(AGGREGATION_ELF, &stdin).deferred_proof_verification(false).run()
         })
         .await?
         {
@@ -448,8 +436,10 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
                     let proof_bytes = bincode::serialize(&proof).unwrap();
                     self.db_client.update_proof_to_complete(request.id, &proof_bytes).await?;
                 } else {
-                    let proof_id = self.request_range_proof(stdin).await?;
-                    self.db_client.update_request_to_prove(request.id, proof_id).await?;
+                    // CUDA mode: generate proof synchronously and save it directly
+                    let proof = self.generate_range_proof(stdin).await?;
+                    let proof_bytes = bincode::serialize(&proof).unwrap();
+                    self.db_client.update_proof_to_complete(request.id, &proof_bytes).await?;
                 }
             }
             RequestType::Aggregation => {
@@ -457,8 +447,9 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
                     let proof = self.generate_mock_agg_proof(&request, stdin).await?;
                     self.db_client.update_proof_to_complete(request.id, &proof.bytes()).await?;
                 } else {
-                    let proof_id = self.request_agg_proof(stdin).await?;
-                    self.db_client.update_request_to_prove(request.id, proof_id).await?;
+                    // CUDA mode: generate proof synchronously and save it directly
+                    let proof = self.generate_agg_proof(stdin).await?;
+                    self.db_client.update_proof_to_complete(request.id, &proof.bytes()).await?;
                 }
             }
         }

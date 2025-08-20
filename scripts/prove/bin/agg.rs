@@ -63,7 +63,7 @@ fn load_aggregation_proof_data(
     (proofs, boot_infos)
 }
 
-// Execute the OP Succinct program for a single block.
+// Execute the OP Succinct program for a single block. (???)
 #[tokio::main]
 async fn main() -> Result<()> {
     utils::setup_logger();

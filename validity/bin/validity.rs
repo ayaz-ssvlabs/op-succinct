@@ -74,6 +74,7 @@ async fn main() -> Result<()> {
         env_config.signer,
         env_config.loop_interval,
         host,
+
     )
     .await?;
 

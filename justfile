@@ -103,10 +103,10 @@ deploy-oracle env_file=".env" *features='':
     # cd into contracts directory
     cd contracts
 
-    VERIFY=""
-    if [ "$ETHERSCAN_API_KEY" != "" ]; then
-      VERIFY="--verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY"
-    fi
+    #VERIFY=""
+    #if [ "$ETHERSCAN_API_KEY" != "" ]; then
+      #VERIFY="--verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY"
+    #fi
     
     ENV_VARS=""
     if [ -n "${ADMIN_PK:-}" ]; then ENV_VARS="$ENV_VARS ADMIN_PK=$ADMIN_PK"; fi
@@ -116,8 +116,8 @@ deploy-oracle env_file=".env" *features='':
     $ENV_VARS forge script script/validity/OPSuccinctDeployer.s.sol:OPSuccinctDeployer \
         --rpc-url $L1_RPC \
         --private-key $PRIVATE_KEY \
-        --broadcast \
-        $VERIFY
+        --broadcast
+        # $VERIFY
 
 # Upgrade the OPSuccinct L2 Output Oracle
 upgrade-oracle env_file=".env" *features='':

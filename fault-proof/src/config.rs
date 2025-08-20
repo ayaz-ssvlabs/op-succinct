@@ -5,6 +5,24 @@ use alloy_transport_http::reqwest::Url;
 use anyhow::Result;
 
 #[derive(Debug, Clone)]
+pub enum SP1ProverMode {
+    Network,
+    Cuda,
+}
+
+impl std::str::FromStr for SP1ProverMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "network" => Ok(SP1ProverMode::Network),
+            "cuda" => Ok(SP1ProverMode::Cuda),
+            _ => anyhow::bail!("Invalid SP1_PROVER mode: {}. Valid options: network, cuda", s),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ProposerConfig {
     /// The L1 RPC URL.
     pub l1_rpc: Url,
@@ -56,6 +74,9 @@ pub struct ProposerConfig {
 
     /// The metrics port.
     pub metrics_port: u16,
+
+    /// The SP1 prover mode to use.
+    pub sp1_prover_mode: SP1ProverMode,
 }
 
 impl ProposerConfig {
@@ -90,6 +111,9 @@ impl ProposerConfig {
                 .parse()?,
             metrics_port: env::var("PROPOSER_METRICS_PORT")
                 .unwrap_or("9000".to_string())
+                .parse()?,
+            sp1_prover_mode: env::var("SP1_PROVER")
+                .unwrap_or("network".to_string())
                 .parse()?,
         })
     }
