@@ -6,6 +6,24 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
+pub enum SP1ProverMode {
+    Network,
+    Cuda,
+}
+
+impl std::str::FromStr for SP1ProverMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "network" => Ok(SP1ProverMode::Network),
+            "cuda" => Ok(SP1ProverMode::Cuda),
+            _ => anyhow::bail!("Invalid SP1_PROVER mode: {}. Valid options: network, cuda", s),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ProposerConfig {
     /// The L1 RPC URL.
     pub l1_rpc: Url,
@@ -61,6 +79,9 @@ pub struct ProposerConfig {
     /// Maximum concurrent proving tasks allowed in fast finality mode.
     /// This limit prevents game creation when proving capacity is reached.
     pub fast_finality_proving_limit: u64,
+
+    /// The SP1 prover mode to use.
+    pub sp1_prover_mode: SP1ProverMode,
 }
 
 impl ProposerConfig {
@@ -98,6 +119,9 @@ impl ProposerConfig {
                 .parse()?,
             fast_finality_proving_limit: env::var("FAST_FINALITY_PROVING_LIMIT")
                 .unwrap_or("1".to_string())
+                .parse()?,
+            sp1_prover_mode: env::var("SP1_PROVER")
+                .unwrap_or("network".to_string())
                 .parse()?,
         })
     }

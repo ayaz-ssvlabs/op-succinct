@@ -20,7 +20,7 @@ use op_succinct_host_utils::{
 use op_succinct_proof_utils::get_range_elf_embedded;
 use op_succinct_signer_utils::Signer;
 use sp1_sdk::{
-    network::FulfillmentStrategy, NetworkProver, Prover, ProverClient, SP1ProofMode,
+    network::FulfillmentStrategy, Prover, SP1ProofMode,
     SP1ProofWithPublicValues, SP1ProvingKey, SP1VerifyingKey, SP1_CIRCUIT_VERSION,
 };
 use tokio::{sync::Mutex, time};
@@ -32,6 +32,7 @@ use crate::{
         OPSuccinctFaultDisputeGame,
     },
     prometheus::ProposerGauge,
+    utils::{create_prover_client, SP1ProverType},
     Action, FactoryTrait, L1Provider, L2Provider, L2ProviderTrait, Mode,
 };
 
@@ -55,7 +56,7 @@ pub enum TaskInfo {
 
 #[derive(Clone)]
 struct SP1Prover {
-    network_prover: Arc<NetworkProver>,
+    prover: SP1ProverType,
     range_pk: Arc<SP1ProvingKey>,
     range_vk: Arc<SP1VerifyingKey>,
     agg_pk: Arc<SP1ProvingKey>,
@@ -101,10 +102,15 @@ where
         fetcher: Arc<OPSuccinctDataFetcher>,
         host: Arc<H>,
     ) -> Result<Self> {
-        let network_prover =
-            Arc::new(ProverClient::builder().network().private_key(&network_private_key).build());
-        let (range_pk, range_vk) = network_prover.setup(get_range_elf_embedded());
-        let (agg_pk, _) = network_prover.setup(AGGREGATION_ELF);
+        let prover = create_prover_client(&config.sp1_prover_mode)?;
+        let (range_pk, range_vk) = match &prover {
+            SP1ProverType::Network(network_prover) => network_prover.setup(get_range_elf_embedded()),
+            SP1ProverType::Cuda(cuda_prover) => cuda_prover.setup(get_range_elf_embedded()),
+        };
+        let (agg_pk, _) = match &prover {
+            SP1ProverType::Network(network_prover) => network_prover.setup(AGGREGATION_ELF),
+            SP1ProverType::Cuda(cuda_prover) => cuda_prover.setup(AGGREGATION_ELF),
+        };
 
         let l1_provider = ProviderBuilder::default().connect_http(config.l1_rpc.clone());
         let l2_provider = ProviderBuilder::default().connect_http(config.l2_rpc.clone());
@@ -120,7 +126,7 @@ where
             init_bond,
             safe_db_fallback: config.safe_db_fallback,
             prover: SP1Prover {
-                network_prover,
+                prover,
                 range_pk: Arc::new(range_pk),
                 range_vk: Arc::new(range_vk),
                 agg_pk: Arc::new(agg_pk),
@@ -173,8 +179,14 @@ where
         tracing::info!("Generating Range Proof");
         let range_proof = if self.config.mock_mode {
             tracing::info!("Using mock mode for range proof generation");
-            let (public_values, _) =
-                self.prover.network_prover.execute(get_range_elf_embedded(), &sp1_stdin).run()?;
+            let (public_values, _) = match &self.prover.prover {
+                SP1ProverType::Network(network_prover) => {
+                    network_prover.execute(get_range_elf_embedded(), &sp1_stdin).run()?
+                }
+                SP1ProverType::Cuda(cuda_prover) => {
+                    cuda_prover.execute(get_range_elf_embedded(), &sp1_stdin).run()?
+                }
+            };
 
             // Create a mock range proof with the public values.
             SP1ProofWithPublicValues::create_mock_proof(
@@ -184,15 +196,24 @@ where
                 SP1_CIRCUIT_VERSION,
             )
         } else {
-            self.prover
-                .network_prover
-                .prove(&self.prover.range_pk, &sp1_stdin)
-                .compressed()
-                .strategy(FulfillmentStrategy::Hosted)
-                .skip_simulation(true)
-                .cycle_limit(1_000_000_000_000)
-                .run_async()
-                .await?
+            match &self.prover.prover {
+                SP1ProverType::Network(network_prover) => {
+                    network_prover
+                        .prove(&self.prover.range_pk, &sp1_stdin)
+                        .compressed()
+                        .strategy(FulfillmentStrategy::Hosted)
+                        .skip_simulation(true)
+                        .cycle_limit(1_000_000_000_000)
+                        .run_async()
+                        .await?
+                }
+                SP1ProverType::Cuda(cuda_prover) => {
+                    cuda_prover
+                        .prove(&self.prover.range_pk, &sp1_stdin)
+                        .compressed()
+                        .run()?
+                }
+            }
         };
 
         tracing::info!("Preparing Stdin for Agg Proof");
@@ -229,12 +250,20 @@ where
         tracing::info!("Generating Agg Proof");
         let agg_proof = if self.config.mock_mode {
             tracing::info!("Using mock mode for aggregation proof generation");
-            let (public_values, _) = self
-                .prover
-                .network_prover
-                .execute(AGGREGATION_ELF, &sp1_stdin)
-                .deferred_proof_verification(false)
-                .run()?;
+            let (public_values, _) = match &self.prover.prover {
+                SP1ProverType::Network(network_prover) => {
+                    network_prover
+                        .execute(AGGREGATION_ELF, &sp1_stdin)
+                        .deferred_proof_verification(false)
+                        .run()?
+                }
+                SP1ProverType::Cuda(cuda_prover) => {
+                    cuda_prover
+                        .execute(AGGREGATION_ELF, &sp1_stdin)
+                        .deferred_proof_verification(false)
+                        .run()?
+                }
+            };
 
             // Create a mock aggregation proof with the public values.
             SP1ProofWithPublicValues::create_mock_proof(
@@ -244,12 +273,21 @@ where
                 SP1_CIRCUIT_VERSION,
             )
         } else {
-            self.prover
-                .network_prover
-                .prove(&self.prover.agg_pk, &sp1_stdin)
-                .groth16()
-                .run_async()
-                .await?
+            match &self.prover.prover {
+                SP1ProverType::Network(network_prover) => {
+                    network_prover
+                        .prove(&self.prover.agg_pk, &sp1_stdin)
+                        .groth16()
+                        .run_async()
+                        .await?
+                }
+                SP1ProverType::Cuda(cuda_prover) => {
+                    cuda_prover
+                        .prove(&self.prover.agg_pk, &sp1_stdin)
+                        .groth16()
+                        .run()?
+                }
+            }
         };
 
         let transaction_request = game.prove(agg_proof.bytes().into()).into_transaction_request();

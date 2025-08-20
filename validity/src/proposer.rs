@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, str::FromStr, sync::Arc, time::Duration};
+use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
 use alloy_eips::BlockId;
 use alloy_primitives::{Address, B256, U256};
@@ -16,7 +16,7 @@ use op_succinct_proof_utils::get_range_elf_embedded;
 use op_succinct_signer_utils::Signer;
 use sp1_sdk::{
     network::proto::types::{ExecutionStatus, FulfillmentStatus},
-    HashableKey, NetworkProver, Prover, ProverClient, SP1Proof, SP1ProofWithPublicValues,
+    HashableKey, NetworkProver, CudaProver, Prover, ProverClient, SP1Proof, SP1ProofWithPublicValues,
 };
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
@@ -25,11 +25,12 @@ use crate::{
     db::{DriverDBClient, OPSuccinctRequest, RequestMode, RequestStatus, RequestType},
     find_gaps, get_latest_proposed_block_number, get_ranges_to_prove, CommitmentConfig,
     ContractConfig, OPSuccinctProofRequester, ProgramConfig, RequesterConfig, ValidityGauge,
+    create_cuda_prover,
 };
 
 /// Configuration for the driver.
 pub struct DriverConfig {
-    pub network_prover: Arc<NetworkProver>,
+    pub cuda_prover: Arc<CudaProver>,
     pub fetcher: Arc<OPSuccinctDataFetcher>,
     pub driver_db_client: Arc<DriverDBClient>,
     pub signer: Signer,
@@ -83,20 +84,10 @@ where
             .add_chain_lock(requester_config.l1_chain_id, requester_config.l2_chain_id)
             .await?;
 
-        // Set a default network private key to avoid an error in mock mode.
-        let private_key = env::var("NETWORK_PRIVATE_KEY").unwrap_or_else(|_| {
-            tracing::warn!(
-                "Using default NETWORK_PRIVATE_KEY of 0x01. This is only valid in mock mode."
-            );
-            "0x0000000000000000000000000000000000000000000000000000000000000001".to_string()
-        });
+        let cuda_prover = create_cuda_prover()?;
 
-        let network_prover =
-            Arc::new(ProverClient::builder().network().private_key(&private_key).build());
-
-        let (range_pk, range_vk) = network_prover.setup(get_range_elf_embedded());
-
-        let (agg_pk, agg_vk) = network_prover.setup(AGGREGATION_ELF);
+        let (range_pk, range_vk) = cuda_prover.setup(get_range_elf_embedded());
+        let (agg_pk, agg_vk) = cuda_prover.setup(AGGREGATION_ELF);
         let multi_block_vkey_u8 = u32_to_u8(range_vk.vk.hash_u32());
         let range_vkey_commitment = B256::from(multi_block_vkey_u8);
         let agg_vkey_hash = B256::from_str(&agg_vk.bytes32()).unwrap();
@@ -119,13 +110,11 @@ where
         // Initialize the proof requester.
         let proof_requester = Arc::new(OPSuccinctProofRequester::new(
             host,
-            network_prover.clone(),
+            cuda_prover.clone(),
             fetcher.clone(),
             db_client.clone(),
             program_config.clone(),
             requester_config.mock,
-            requester_config.range_proof_strategy,
-            requester_config.agg_proof_strategy,
             requester_config.agg_proof_mode,
             requester_config.safe_db_fallback,
         ));
@@ -138,7 +127,7 @@ where
 
         let proposer = Proposer {
             driver_config: DriverConfig {
-                network_prover,
+                cuda_prover,
                 fetcher,
                 driver_db_client: db_client,
                 signer,
@@ -210,23 +199,29 @@ where
         // Sort the requests by start block.
         requests.sort_by_key(|r| r.0);
 
+        // Convert the requests to (start, end) tuples for find_gaps
+        let existing_ranges: Vec<(u64, u64)> = requests.iter()
+            .map(|(start, end)| (*start as u64, *end as u64))
+            .collect();
+
+        // Find gaps in coverage between latest proposed block and finalized block
         let disjoint_ranges = find_gaps(
-            latest_proposed_block_number as i64,
-            finalized_block_number as i64,
-            &requests,
+            existing_ranges,
+            latest_proposed_block_number,
+            finalized_block_number,
         );
 
-        let ranges_to_prove = get_ranges_to_prove(
-            &disjoint_ranges,
-            self.requester_config.range_proof_interval as i64,
-        );
+        // Convert gaps back to i64 ranges for range proof requests
+        let ranges_to_prove: Vec<(i64, i64)> = disjoint_ranges.iter()
+            .map(|(start, end)| (*start as i64, *end as i64))
+            .collect();
 
         if !ranges_to_prove.is_empty() {
             info!("Inserting {} range proof requests into the database.", ranges_to_prove.len());
 
             // Create range proof requests for the ranges to prove in parallel
-            let new_range_requests = stream::iter(ranges_to_prove)
-                .map(|range| {
+            let new_range_requests = stream::iter(ranges_to_prove.into_iter())
+                .map(|(start, end)| {
                     let mode = if self.requester_config.mock {
                         RequestMode::Mock
                     } else {
@@ -234,8 +229,8 @@ where
                     };
                     OPSuccinctRequest::create_range_request(
                         mode,
-                        range.0,
-                        range.1,
+                        start,
+                        end,
                         self.program_config.commitments.range_vkey_commitment,
                         self.program_config.commitments.rollup_config_hash,
                         self.requester_config.l1_chain_id,
@@ -286,15 +281,18 @@ where
         Ok(())
     }
 
-    /// Process a single OP Succinct request's proof status.
+    /// CUDA mode: No async proof status checking needed since proofs are generated synchronously
     #[tracing::instrument(name = "proposer.process_proof_request_status", skip(self, request))]
     pub async fn process_proof_request_status(&self, request: OPSuccinctRequest) -> Result<()> {
+        // In CUDA mode, proofs are generated synchronously in make_proof_request
+        // so this method is effectively a no-op
+        debug!("CUDA mode: Skipping async proof status check for request {}", request.id);
+        Ok(())
+        
+        /* OLD NETWORK CODE - COMMENTED OUT FOR CUDA-ONLY MODE
         if let Some(proof_request_id) = request.proof_request_id.as_ref() {
-            let (status, proof) = self
-                .driver_config
-                .network_prover
-                .get_proof_status(B256::from_slice(proof_request_id))
-                .await?;
+            let cuda_prover = &self.driver_config.cuda_prover;
+            // CUDA provers don't have async status checking
 
             // Check if current time exceeds deadline. If so, the proof has timed out.
             let current_time = std::time::SystemTime::now()
@@ -433,6 +431,7 @@ where
         }
 
         Ok(())
+        */
     }
 
     /// Create aggregation proofs based on the completed range proofs. The range proofs must be

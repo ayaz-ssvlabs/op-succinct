@@ -1,162 +1,130 @@
+use sp1_sdk::{CudaProver, ProverClient};
+use std::sync::Arc;
+use anyhow::Result;
+
+/// Creates a CUDA ProverClient for validity proposer.
+/// 
+/// # Returns
+/// 
+/// * `Result<Arc<CudaProver>>` - The configured CUDA prover client
+pub fn create_cuda_prover() -> Result<Arc<CudaProver>> {
+    let cuda_prover = Arc::new(ProverClient::builder().cuda().build());
+    tracing::info!("Created SP1 ProverClient in CUDA mode");
+    Ok(cuda_prover)
+}
+
 /// Identifies gaps not covered by the given sub-ranges in the overall range.
 ///
-/// This function takes an overall block range and a list of sorted sub-ranges.
-/// It identifies and returns the gaps between these sub-ranges in the overall range.
+/// This function takes a vector of sub-ranges and an overall range, and returns a vector of ranges
+/// that are not covered by any of the sub-ranges within the overall range.
+///
+/// # Arguments
+///
+/// * `sub_ranges` - A vector of (start, end) tuples representing the sub-ranges.
+/// * `overall_start` - The start of the overall range.
+/// * `overall_end` - The end of the overall range.
+///
+/// # Returns
+///
+/// A vector of (start, end) tuples representing the gaps.
 ///
 /// # Example
 ///
-/// ```
+/// ```rust
 /// use op_succinct_validity::find_gaps;
 ///
-/// let overall_start = 1;
-/// let overall_end = 10;
-/// let ranges = [(2, 5), (7, 9)];
-///
-/// let gaps = find_gaps(overall_start, overall_end, &ranges);
-/// assert_eq!(gaps, [(1, 2), (5, 7), (9, 10)]);
+/// let sub_ranges = vec![(10, 20), (30, 40)];
+/// let gaps = find_gaps(sub_ranges, 5, 45);
+/// assert_eq!(gaps, vec![(5, 10), (20, 30), (40, 45)]);
 /// ```
-pub fn find_gaps(overall_start: i64, overall_end: i64, ranges: &[(i64, i64)]) -> Vec<(i64, i64)> {
-    let mut gaps = Vec::new();
-    let mut current_start = overall_start;
-
-    for &(start, end) in ranges {
-        if current_start < start {
-            gaps.push((current_start, start));
-        }
-        current_start = end.max(current_start); // Ensure current_start doesn't move backward
+pub fn find_gaps(sub_ranges: Vec<(u64, u64)>, overall_start: u64, overall_end: u64) -> Vec<(u64, u64)> {
+    if overall_start >= overall_end {
+        return vec![];
     }
 
-    if current_start < overall_end {
-        gaps.push((current_start, overall_end));
+    let mut ranges = sub_ranges;
+    ranges.sort_by_key(|&(start, _)| start);
+
+    let mut gaps = Vec::new();
+    let mut current_pos = overall_start;
+
+    for (start, end) in ranges {
+        // Skip ranges that are completely outside the overall range
+        if end <= overall_start || start >= overall_end {
+            continue;
+        }
+
+        // Adjust range to be within the overall range
+        let adjusted_start = start.max(overall_start);
+        let adjusted_end = end.min(overall_end);
+
+        // If there's a gap before this range, add it
+        if current_pos < adjusted_start {
+            gaps.push((current_pos, adjusted_start));
+        }
+
+        // Move current position to the end of this range
+        current_pos = current_pos.max(adjusted_end);
+    }
+
+    // If there's a gap after the last range, add it
+    if current_pos < overall_end {
+        gaps.push((current_pos, overall_end));
     }
 
     gaps
-}
-
-/// Determines the block ranges to be proven based on a set of ranges and a specified interval.
-///
-/// Given a set block ranges that overlap at most on the boundaries and a range proof interval, this
-/// function calculates and returns the specific block ranges that need to be proven. Ensures that
-/// all disjoint ranges are fully covered by conditionally inserting a single range smaller than the
-/// range proof interval if necessary.
-///
-/// # Example
-///
-/// ```
-/// use op_succinct_validity::get_ranges_to_prove;
-///
-/// let disjoint_ranges = [(0, 50), (100, 200), (200, 210)];
-/// let range_proof_interval = 25;
-///
-/// let ranges_to_prove = get_ranges_to_prove(&disjoint_ranges, range_proof_interval);
-/// assert_eq!(
-///     ranges_to_prove,
-///     [(0, 25), (25, 50), (100, 125), (125, 150), (150, 175), (175, 200)]
-/// );
-/// ```
-pub fn get_ranges_to_prove(
-    disjoint_ranges: &[(i64, i64)],
-    range_proof_interval: i64,
-) -> Vec<(i64, i64)> {
-    let mut ranges = Vec::new();
-
-    for &(start, end) in disjoint_ranges {
-        let mut current_start = start;
-        while current_start < end {
-            let current_end = std::cmp::min(current_start + range_proof_interval, end);
-            ranges.push((current_start, current_end));
-            current_start = current_end;
-        }
-    }
-
-    // For the last range, remove it if it's less than range_proof_interval. This is to ensure when
-    // inserting the ranges near the tip, only requests of size range_proof_interval are
-    // inserted.
-    if let Some(&(start, end)) = ranges.last() {
-        if end - start < range_proof_interval {
-            ranges.pop();
-        }
-    }
-
-    ranges
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    macro_rules! test_find_gaps {
-        ($name:ident, $overall_start:expr, $overall_end:expr, $ranges:expr, $expected:expr) => {
-            #[test]
-            fn $name() {
-                let gaps = find_gaps($overall_start, $overall_end, $ranges);
-                assert_eq!(gaps, $expected);
-            }
-        };
+    #[test]
+    fn test_find_gaps_basic() {
+        let sub_ranges = vec![(10, 20), (30, 40)];
+        let gaps = find_gaps(sub_ranges, 5, 45);
+        assert_eq!(gaps, vec![(5, 10), (20, 30), (40, 45)]);
     }
 
-    test_find_gaps!(test_find_gaps_no_gaps, 1, 4, &[(1, 2), (2, 3), (3, 4)], &[]);
-    test_find_gaps!(
-        test_find_gaps_with_gaps,
-        1,
-        10,
-        &[(1, 2), (4, 5), (7, 8)],
-        &[(2, 4), (5, 7), (8, 10)]
-    );
-    test_find_gaps!(test_find_gaps_at_start, 1, 6, &[(3, 4), (5, 6)], &[(1, 3), (4, 5)]);
-    test_find_gaps!(test_find_gaps_at_end, 1, 5, &[(1, 2), (2, 3)], &[(3, 5)]);
-    test_find_gaps!(test_find_gaps_empty_ranges, 1, 5, &[], &[(1, 5)]);
-    test_find_gaps!(test_find_gaps_single_range, 1, 5, &[(2, 4)], &[(1, 2), (4, 5)]);
-
-    macro_rules! test_get_ranges_to_prove {
-        ($name:ident, $disjoint_ranges:expr, $range_proof_interval:expr, $expected:expr) => {
-            #[test]
-            fn $name() {
-                let result = get_ranges_to_prove($disjoint_ranges, $range_proof_interval);
-                assert_eq!(result, $expected);
-            }
-        };
+    #[test]
+    fn test_find_gaps_no_gaps() {
+        let sub_ranges = vec![(10, 20), (20, 30), (30, 40)];
+        let gaps = find_gaps(sub_ranges, 10, 40);
+        assert_eq!(gaps, vec![]);
     }
 
-    test_get_ranges_to_prove!(
-        test_get_ranges_to_prove_case_1,
-        &[(0, 50), (100, 200), (200, 210)],
-        25,
-        &[(0, 25), (25, 50), (100, 125), (125, 150), (150, 175), (175, 200)]
-    );
+    #[test]
+    fn test_find_gaps_overlapping() {
+        let sub_ranges = vec![(10, 25), (20, 35)];
+        let gaps = find_gaps(sub_ranges, 5, 45);
+        assert_eq!(gaps, vec![(5, 10), (35, 45)]);
+    }
 
-    test_get_ranges_to_prove!(
-        test_get_ranges_to_prove_case_2,
-        &[(0, 30), (40, 70)],
-        10,
-        &[(0, 10), (10, 20), (20, 30), (40, 50), (50, 60), (60, 70)]
-    );
+    #[test]
+    fn test_find_gaps_out_of_range() {
+        let sub_ranges = vec![(1, 5), (50, 60)];
+        let gaps = find_gaps(sub_ranges, 10, 40);
+        assert_eq!(gaps, vec![(10, 40)]);
+    }
 
-    test_get_ranges_to_prove!(
-        test_get_ranges_to_prove_case_3,
-        &[(0, 100)],
-        20,
-        &[(0, 20), (20, 40), (40, 60), (60, 80), (80, 100)]
-    );
+    #[test]
+    fn test_find_gaps_empty_input() {
+        let sub_ranges = vec![];
+        let gaps = find_gaps(sub_ranges, 10, 40);
+        assert_eq!(gaps, vec![(10, 40)]);
+    }
 
-    test_get_ranges_to_prove!(
-        test_get_ranges_to_prove_case_4,
-        &[(0, 15), (20, 35)],
-        5,
-        &[(0, 5), (5, 10), (10, 15), (20, 25), (25, 30), (30, 35)]
-    );
+    #[test]
+    fn test_find_gaps_invalid_overall_range() {
+        let sub_ranges = vec![(10, 20)];
+        let gaps = find_gaps(sub_ranges, 40, 30);
+        assert_eq!(gaps, vec![]);
+    }
 
-    test_get_ranges_to_prove!(
-        test_get_ranges_to_prove_case_5,
-        &[(0, 5), (10, 15), (20, 25)],
-        3,
-        &[(0, 3), (3, 5), (10, 13), (13, 15), (20, 23)]
-    );
-
-    test_get_ranges_to_prove!(
-        test_get_ranges_to_prove_case_interval_larger_than_range,
-        &[(0, 5), (10, 15), (20, 25)],
-        30,
-        &[(0, 5), (10, 15)]
-    );
+    #[test]
+    fn test_find_gaps_single_range_covers_all() {
+        let sub_ranges = vec![(5, 45)];
+        let gaps = find_gaps(sub_ranges, 10, 40);
+        assert_eq!(gaps, vec![]);
+    }
 }

@@ -6,6 +6,9 @@ use op_succinct_signer_utils::Signer;
 use reqwest::Url;
 use sp1_sdk::{network::FulfillmentStrategy, SP1ProofMode};
 
+// Validity proposer only supports CUDA mode
+// No configuration needed - always use CUDA
+
 #[derive(Debug, Clone)]
 pub struct EnvironmentConfig {
     pub db_url: String,
