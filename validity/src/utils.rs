@@ -8,7 +8,7 @@ use anyhow::Result;
 /// 
 /// * `Result<Arc<CudaProver>>` - The configured CUDA prover client
 pub fn create_cuda_prover() -> Result<Arc<CudaProver>> {
-    let cuda_prover = Arc::new(ProverClient::builder().cuda().build());
+    let cuda_prover = Arc::new(ProverClient::builder().cuda().server("http://sp1-gpu:3000/twirp/").build());
     tracing::info!("Created SP1 ProverClient in CUDA mode");
     Ok(cuda_prover)
 }

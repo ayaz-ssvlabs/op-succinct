@@ -9,6 +9,8 @@ services:
       - postgres-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - sp1-network  # Added this
 
   op-succinct:
     build:
@@ -17,12 +19,35 @@ services:
     env_file:
       - ${ENV_FILE:-.env}
     environment:
+      - RUST_LOG=engine=debug,block_builder=trace,hint_writer=trace,host_server=trace,hint_reader=trace,oracle_server=trace,host_backend=trace,kona_host=trace,op_succinct_validity=trace
       - DATABASE_URL=postgres://op-succinct@postgres:5432/op-succinct
     depends_on:
       - postgres
+      - moongate
     restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - sp1-network
+
+  moongate:
+    image: public.ecr.aws/succinct-labs/moongate:v5.0.0
+    ports:
+      - "3000:3000"
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - RUST_LOG=${RUST_LOG:-info}
+    container_name: sp1-gpu
+    restart: unless-stopped
+    networks:
+      - sp1-network
 
 volumes:
   postgres-data:
+
+networks:
+  sp1-network:
+    driver: bridge
