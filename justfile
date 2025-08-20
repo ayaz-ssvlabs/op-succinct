@@ -266,6 +266,7 @@ deploy-dispute-game-factory env_file=".env":
         --broadcast \
         $VERIFY
 
+<<<<<<< HEAD
 # Add a new OpSuccinctConfig to the L2 Output Oracle
 add-config config_name env_file=".env" *features='':
     #!/usr/bin/env bash
@@ -281,6 +282,27 @@ add-config config_name env_file=".env" *features='':
     
     # Load environment variables
     source {{env_file}}
+=======
+
+
+# Set OPSuccinctDisputeGame implementation on existing DisputeGameFactory
+set-dispute-game-impl env_file=".env":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Load environment variables
+    source {{env_file}}
+
+    # Check if required environment variables are set.
+    if [ -z "${DGF_ADDRESS:-}" ]; then
+        echo "Error: DGF_ADDRESS environment variable is not set"
+        exit 1
+    fi
+    if [ -z "${L2OO_ADDRESS:-}" ]; then
+        echo "Error: L2OO_ADDRESS environment variable is not set"
+        exit 1
+    fi
+>>>>>>> 4fea11c (Add set-dispute-game-impl justfile goal)
 
     # cd into contracts directory
     cd contracts
@@ -323,3 +345,18 @@ remove-config config_name env_file=".env":
         --rpc-url $L1_RPC \
         --private-key $PRIVATE_KEY \
         --broadcast
+
+    VERIFY=""
+    if [ "${ETHERSCAN_API_KEY:-}" != "" ]; then
+      VERIFY="--verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY"
+    fi
+
+    # Run the forge script
+    env DGF_ADDRESS=$DGF_ADDRESS \
+        L2OO_ADDRESS=$L2OO_ADDRESS \
+        forge script script/validity/SetOPSuccinctDisputeGameImpl.s.sol:SetOPSuccinctDisputeGameImpl \
+        --rpc-url $L1_RPC \
+        --private-key $PRIVATE_KEY \
+        --broadcast \
+        --legacy \
+        $VERIFY
