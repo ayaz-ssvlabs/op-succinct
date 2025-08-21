@@ -228,13 +228,13 @@ where
                 .network_prover
                 .prove(&self.prover.range_pk, &sp1_stdin)
                 .compressed()
+                .skip_simulation(true)
                 // TODO: implement feature flag.
                 .strategy(FulfillmentStrategy::Auction)
+                .timeout(Duration::from_secs(self.config.timeout))
                 .max_price_per_pgu(self.config.max_price_per_pgu)
-                .skip_simulation(true)
-                .timeout(Duration::from_secs(3600)) // 1 hour
-                .cycle_limit(50_000_000_000) // 50 billion
-                .gas_limit(70_000_000_000) // 70 billion
+                .cycle_limit(self.config.range_cycle_limit)
+                .gas_limit(self.config.range_gas_limit)
                 .run_async()
                 .await?;
 
@@ -293,10 +293,13 @@ where
             self.prover
                 .network_prover
                 .prove(&self.prover.agg_pk, &sp1_stdin)
+                .groth16()
                 // TODO: implement feature flag.
                 .strategy(FulfillmentStrategy::Auction)
+                .timeout(Duration::from_secs(self.config.timeout))
                 .max_price_per_pgu(self.config.max_price_per_pgu)
-                .groth16()
+                .cycle_limit(self.config.agg_cycle_limit)
+                .gas_limit(self.config.agg_gas_limit)
                 .run_async()
                 .await?
         };
