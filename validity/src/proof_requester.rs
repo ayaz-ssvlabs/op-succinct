@@ -160,7 +160,8 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
             .max_price_per_pgu(self.max_price_per_pgu)
             .skip_simulation(true)
             .timeout(Duration::from_secs(3600)) // 1 hour
-            .cycle_limit(1_000_000_000_000)
+            .cycle_limit(50_000_000_000) // 50 billion
+            .gas_limit(70_000_000_000) // 70 billion
             .request_async()
             .await
         {
