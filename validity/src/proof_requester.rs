@@ -12,7 +12,10 @@ use sp1_sdk::{
     network::{proto::types::ExecutionStatus, FulfillmentStrategy},
     NetworkProver, SP1Proof, SP1ProofMode, SP1ProofWithPublicValues, SP1Stdin, SP1_CIRCUIT_VERSION,
 };
-use std::{sync::Arc, time::Instant};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tracing::{info, warn};
 
 use crate::{
@@ -156,6 +159,7 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
             // TODO: implement feature flag.
             .max_price_per_pgu(self.max_price_per_pgu)
             .skip_simulation(true)
+            .timeout(Duration::from_secs(3600)) // 1 hour
             .cycle_limit(1_000_000_000_000)
             .request_async()
             .await
