@@ -27,6 +27,8 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp
+      - /root/.sp1:/root/.sp1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
