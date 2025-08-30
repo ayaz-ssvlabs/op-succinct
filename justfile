@@ -360,3 +360,36 @@ remove-config config_name env_file=".env":
         --broadcast \
         --legacy \
         $VERIFY
+
+# Set DisputeGameFactory on target contract
+set-dispute-game-factory env_file=".env":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Load environment variables
+    source {{env_file}}
+
+    # Check if required environment variables are set.
+    if [ -z "${L2OO_ADDRESS:-}" ]; then
+        echo "Error: L2OO_ADDRESS environment variable is not set"
+        exit 1
+    fi
+    if [ -z "${DGF_ADDRESS:-}" ]; then
+        echo "Error: DGF_ADDRESS environment variable is not set"
+        exit 1
+    fi
+
+    # cd into contracts directory
+    cd contracts
+
+    # forge install
+    forge install
+
+    # Run the forge script
+    env L2OO_ADDRESS=$L2OO_ADDRESS \
+        DGF_ADDRESS=$DGF_ADDRESS \
+        forge script script/validity/SetDisputeGameFactory.s.sol:SetDisputeGameFactory \
+        --rpc-url $L1_RPC \
+        --private-key $PRIVATE_KEY \
+        --broadcast \
+        --legacy
