@@ -323,6 +323,16 @@ set-dispute-game-impl env_file=".env":
     # forge install
     forge install
 
+    # Run the forge script
+    env DGF_ADDRESS=$DGF_ADDRESS \
+        L2OO_ADDRESS=$L2OO_ADDRESS \
+        forge script script/validity/SetOPSuccinctDisputeGameImpl.s.sol:SetOPSuccinctDisputeGameImpl \
+        --rpc-url $L1_RPC \
+        --private-key $PRIVATE_KEY \
+        --broadcast \
+        --legacy \
+        $VERIFY
+
 # Remove an OpSuccinctConfig from the L2 Output Oracle  
 remove-config config_name env_file=".env":
     #!/usr/bin/env bash
