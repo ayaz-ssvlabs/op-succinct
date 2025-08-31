@@ -330,8 +330,7 @@ set-dispute-game-impl env_file=".env":
         --rpc-url $L1_RPC \
         --private-key $PRIVATE_KEY \
         --broadcast \
-        --legacy \
-        $VERIFY
+        --legacy
 
 # Remove an OpSuccinctConfig from the L2 Output Oracle  
 remove-config config_name env_file=".env":
