@@ -14,6 +14,6 @@ pub use db::*;
 pub use env::*;
 pub use prom::*;
 pub use proof_requester::*;
-pub use proposer::*;
+pub use proposer::{Proposer, DriverConfig, TaskMap, ProposerExecutionStatus};
 pub use types::*;
 pub use utils::*;

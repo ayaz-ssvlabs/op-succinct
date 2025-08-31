@@ -9,7 +9,6 @@ use op_succinct_host_utils::{
 };
 use op_succinct_proof_utils::get_range_elf_embedded;
 use sp1_sdk::{
-    network::proto::types::ExecutionStatus,
     CudaProver, SP1Proof, SP1ProofMode, SP1ProofWithPublicValues, SP1Stdin, SP1_CIRCUIT_VERSION,
 };
 use std::{sync::Arc, time::Instant};
@@ -19,6 +18,14 @@ use crate::{
     db::DriverDBClient, OPSuccinctRequest, ProgramConfig, RequestExecutionStatistics,
     RequestStatus, RequestType, ValidityGauge,
 };
+
+// Simple enum to replace SP1's ExecutionStatus for CUDA mode
+#[derive(Debug, PartialEq)]
+pub enum ExecutionStatus {
+    Unexecutable,
+    Failed,
+    UnspecifiedExecutionStatus,
+}
 
 pub struct OPSuccinctProofRequester<H: OPSuccinctHost> {
     pub host: Arc<H>,

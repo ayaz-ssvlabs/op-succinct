@@ -14,10 +14,7 @@ use op_succinct_host_utils::{
 };
 use op_succinct_proof_utils::get_range_elf_embedded;
 use op_succinct_signer_utils::Signer;
-use sp1_sdk::{
-    network::proto::types::ExecutionStatus,
-    HashableKey, CudaProver, Prover,
-};
+use sp1_sdk::{CudaProver, HashableKey, Prover};
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
 
@@ -27,6 +24,14 @@ use crate::{
     ContractConfig, OPSuccinctProofRequester, ProgramConfig, RequesterConfig, ValidityGauge,
     create_cuda_prover,
 };
+
+// Simple enum to replace SP1's ExecutionStatus for CUDA mode
+#[derive(Debug, PartialEq)]
+pub enum ProposerExecutionStatus {
+    Unexecutable,
+    Failed,
+    UnspecifiedExecutionStatus,
+}
 
 /// Configuration for the driver.
 pub struct DriverConfig {
@@ -1109,7 +1114,7 @@ where
                                 .proof_requester
                                 .handle_failed_request(
                                     request,
-                                    ExecutionStatus::UnspecifiedExecutionStatus,
+                                    crate::proof_requester::ExecutionStatus::UnspecifiedExecutionStatus,
                                 )
                                 .await
                             {
@@ -1135,7 +1140,7 @@ where
                             .proof_requester
                             .handle_failed_request(
                                 request,
-                                ExecutionStatus::UnspecifiedExecutionStatus,
+                                crate::proof_requester::ExecutionStatus::UnspecifiedExecutionStatus,
                             )
                             .await
                         {
