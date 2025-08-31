@@ -266,7 +266,6 @@ deploy-dispute-game-factory env_file=".env":
         --broadcast \
         $VERIFY
 
-<<<<<<< HEAD
 # Add a new OpSuccinctConfig to the L2 Output Oracle
 add-config config_name env_file=".env" *features='':
     #!/usr/bin/env bash
@@ -282,8 +281,23 @@ add-config config_name env_file=".env" *features='':
     
     # Load environment variables
     source {{env_file}}
-=======
 
+    # cd into contracts directory
+    cd contracts
+
+    # forge install
+    forge install
+    
+    # Run the forge script to add config
+    env L2OO_ADDRESS="$L2OO_ADDRESS" \
+        ${EXECUTE_UPGRADE_CALL:+EXECUTE_UPGRADE_CALL="$EXECUTE_UPGRADE_CALL"} \
+        ${ADMIN_PK:+ADMIN_PK="$ADMIN_PK"} \
+        ${DEPLOY_PK:+DEPLOY_PK="$DEPLOY_PK"} \
+        forge script script/validity/OPSuccinctParameterUpdater.s.sol:OPSuccinctParameterUpdater \
+        --sig "addConfig(string)" "{{config_name}}" \
+        --rpc-url $L1_RPC \
+        --private-key $PRIVATE_KEY \
+        --broadcast
 
 # Set OPSuccinctDisputeGame implementation on existing DisputeGameFactory
 set-dispute-game-impl env_file=".env":
@@ -302,24 +316,12 @@ set-dispute-game-impl env_file=".env":
         echo "Error: L2OO_ADDRESS environment variable is not set"
         exit 1
     fi
->>>>>>> 4fea11c (Add set-dispute-game-impl justfile goal)
 
     # cd into contracts directory
     cd contracts
 
     # forge install
     forge install
-    
-    # Run the forge script to add config
-    env L2OO_ADDRESS="$L2OO_ADDRESS" \
-        ${EXECUTE_UPGRADE_CALL:+EXECUTE_UPGRADE_CALL="$EXECUTE_UPGRADE_CALL"} \
-        ${ADMIN_PK:+ADMIN_PK="$ADMIN_PK"} \
-        ${DEPLOY_PK:+DEPLOY_PK="$DEPLOY_PK"} \
-        forge script script/validity/OPSuccinctParameterUpdater.s.sol:OPSuccinctParameterUpdater \
-        --sig "addConfig(string)" "{{config_name}}" \
-        --rpc-url $L1_RPC \
-        --private-key $PRIVATE_KEY \
-        --broadcast
 
 # Remove an OpSuccinctConfig from the L2 Output Oracle  
 remove-config config_name env_file=".env":
