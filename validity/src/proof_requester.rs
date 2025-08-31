@@ -436,28 +436,10 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
                     let proof_bytes = bincode::serialize(&proof).unwrap();
                     self.db_client.update_proof_to_complete(request.id, &proof_bytes).await?;
                 } else {
-<<<<<<< HEAD
-                    let proof_id = self.request_range_proof(stdin).await?;
-                    self.db_client.update_request_to_prove(request.id, proof_id).await?;
-
-                    info!(
-                        proof_id = request.id,
-                        start_block = request.start_block,
-                        end_block = request.end_block,
-                        proof_request_time = ?request.created_at,
-                        total_tx_fees = %request.total_tx_fees,
-                        total_transactions = request.total_nb_transactions,
-                        witnessgen_duration_s = request.witnessgen_duration,
-                        total_eth_gas_used = request.total_eth_gas_used,
-                        total_l1_fees = %request.total_l1_fees,
-                        "Range proof request submitted to Succinct network"
-                    );
-=======
                     // CUDA mode: generate proof synchronously and save it directly
                     let proof = self.generate_range_proof(stdin).await?;
                     let proof_bytes = bincode::serialize(&proof).unwrap();
                     self.db_client.update_proof_to_complete(request.id, &proof_bytes).await?;
->>>>>>> 6c3c090 (Add cuda support to op-succinct daemon mode)
                 }
             }
             RequestType::Aggregation => {
@@ -465,25 +447,9 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
                     let proof = self.generate_mock_agg_proof(&request, stdin).await?;
                     self.db_client.update_proof_to_complete(request.id, &proof.bytes()).await?;
                 } else {
-<<<<<<< HEAD
-                    let proof_id = self.request_agg_proof(stdin).await?;
-                    self.db_client.update_request_to_prove(request.id, proof_id).await?;
-
-                    info!(
-                        proof_id = request.id,
-                        start_block = request.start_block,
-                        end_block = request.end_block,
-                        proof_request_time = ?request.created_at,
-                        witnessgen_duration_s = request.witnessgen_duration,
-                        checkpointed_l1_block_number = request.checkpointed_l1_block_number,
-                        checkpointed_l1_block_hash = ?request.checkpointed_l1_block_hash,
-                        "Aggregation proof request submitted to Succinct network"
-                    );
-=======
                     // CUDA mode: generate proof synchronously and save it directly
                     let proof = self.generate_agg_proof(stdin).await?;
                     self.db_client.update_proof_to_complete(request.id, &proof.bytes()).await?;
->>>>>>> 6c3c090 (Add cuda support to op-succinct daemon mode)
                 }
             }
         }
