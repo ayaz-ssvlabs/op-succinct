@@ -82,6 +82,9 @@ pub struct ProposerConfig {
 
     /// The SP1 prover mode to use.
     pub sp1_prover_mode: SP1ProverMode,
+
+    /// The submission interval for aggregation proofs (number of L2 blocks).
+    pub submission_interval: u64,
 }
 
 impl ProposerConfig {
@@ -94,8 +97,9 @@ impl ProposerConfig {
             fast_finality_mode: env::var("FAST_FINALITY_MODE")
                 .unwrap_or("false".to_string())
                 .parse()?,
-            proposal_interval_in_blocks: env::var("PROPOSAL_INTERVAL_IN_BLOCKS")
-                .unwrap_or("1800".to_string())
+            proposal_interval_in_blocks: env::var("RANGE_PROOF_INTERVAL")
+                .or_else(|_| env::var("PROPOSAL_INTERVAL_IN_BLOCKS"))
+                .unwrap_or("200".to_string())
                 .parse()?,
             fetch_interval: env::var("FETCH_INTERVAL").unwrap_or("30".to_string()).parse()?,
             game_type: env::var("GAME_TYPE").expect("GAME_TYPE not set").parse()?,
@@ -122,6 +126,9 @@ impl ProposerConfig {
                 .parse()?,
             sp1_prover_mode: env::var("SP1_PROVER")
                 .unwrap_or("network".to_string())
+                .parse()?,
+            submission_interval: env::var("SUBMISSION_INTERVAL")
+                .unwrap_or("800".to_string())
                 .parse()?,
         })
     }

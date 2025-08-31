@@ -216,10 +216,16 @@ where
             finalized_block_number,
         );
 
-        // Convert gaps back to i64 ranges for range proof requests
-        let ranges_to_prove: Vec<(i64, i64)> = disjoint_ranges.iter()
-            .map(|(start, end)| (*start as i64, *end as i64))
-            .collect();
+        // Convert gaps back to i64 ranges for range proof requests, splitting into 250-block chunks
+        let mut ranges_to_prove: Vec<(i64, i64)> = Vec::new();
+        for (start, end) in disjoint_ranges.iter() {
+            let mut current_start = *start;
+            while current_start < *end {
+                let current_end = std::cmp::min(current_start + 250, *end);
+                ranges_to_prove.push((current_start as i64, current_end as i64));
+                current_start = current_end;
+            }
+        }
 
         if !ranges_to_prove.is_empty() {
             info!("Inserting {} range proof requests into the database.", ranges_to_prove.len());
