@@ -218,21 +218,30 @@ where
 
         // Convert gaps back to i64 ranges for range proof requests, splitting into chunks based on range_proof_interval
         let mut ranges_to_prove: Vec<(i64, i64)> = Vec::new();
-        info!("Range proof interval: {}", self.requester_config.range_proof_interval);
-        info!("Disjoint ranges to chunk: {:?}", disjoint_ranges);
+        debug!("Range proof interval: {}", self.requester_config.range_proof_interval);
+        debug!("Disjoint ranges to chunk: {:?}", disjoint_ranges);
         
         for (start, end) in disjoint_ranges.iter() {
             let mut current_start = *start;
-            info!("Processing gap: {} to {}", start, end);
-            while current_start < *end {
-                let current_end = std::cmp::min(current_start + self.requester_config.range_proof_interval, *end);
-                info!("Creating chunk: {} to {}", current_start, current_end);
+            debug!("Processing gap: {} to {}", start, end);
+            
+            // Only create ranges if we have exactly range_proof_interval blocks or more
+            while current_start + self.requester_config.range_proof_interval <= *end {
+                let current_end = current_start + self.requester_config.range_proof_interval;
+                debug!("Creating chunk: {} to {} (exactly {} blocks)", current_start, current_end, self.requester_config.range_proof_interval);
                 ranges_to_prove.push((current_start as i64, current_end as i64));
                 current_start = current_end;
             }
+            
+            // Log any remaining blocks that don't form a complete interval
+            if current_start < *end {
+                let remaining_blocks = *end - current_start;
+                debug!("Skipping remaining {} blocks ({} to {}) - waiting for more blocks to reach {} block interval", 
+                      remaining_blocks, current_start, end, self.requester_config.range_proof_interval);
+            }
         }
         
-        info!("Final ranges to prove: {:?}", ranges_to_prove);
+        debug!("Final ranges to prove: {:?}", ranges_to_prove);
 
         if !ranges_to_prove.is_empty() {
             info!("Inserting {} range proof requests into the database.", ranges_to_prove.len());
