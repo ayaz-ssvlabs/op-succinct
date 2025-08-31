@@ -15,15 +15,15 @@ use op_succinct_host_utils::{
 use op_succinct_proof_utils::get_range_elf_embedded;
 use op_succinct_signer_utils::Signer;
 use sp1_sdk::{
-    network::proto::types::{ExecutionStatus, FulfillmentStatus},
-    HashableKey, NetworkProver, CudaProver, Prover, ProverClient, SP1Proof, SP1ProofWithPublicValues,
+    network::proto::types::ExecutionStatus,
+    HashableKey, CudaProver, Prover,
 };
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
 
 use crate::{
-    db::{DriverDBClient, OPSuccinctRequest, RequestMode, RequestStatus, RequestType},
-    find_gaps, get_latest_proposed_block_number, get_ranges_to_prove, CommitmentConfig,
+    db::{DriverDBClient, OPSuccinctRequest, RequestMode, RequestStatus},
+    find_gaps, get_latest_proposed_block_number, CommitmentConfig,
     ContractConfig, OPSuccinctProofRequester, ProgramConfig, RequesterConfig, ValidityGauge,
     create_cuda_prover,
 };

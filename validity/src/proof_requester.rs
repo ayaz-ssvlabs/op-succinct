@@ -9,8 +9,8 @@ use op_succinct_host_utils::{
 };
 use op_succinct_proof_utils::get_range_elf_embedded;
 use sp1_sdk::{
-    network::{proto::types::ExecutionStatus, FulfillmentStrategy},
-    NetworkProver, CudaProver, SP1Proof, SP1ProofMode, SP1ProofWithPublicValues, SP1Stdin, SP1_CIRCUIT_VERSION,
+    network::proto::types::ExecutionStatus,
+    CudaProver, SP1Proof, SP1ProofMode, SP1ProofWithPublicValues, SP1Stdin, SP1_CIRCUIT_VERSION,
 };
 use std::{sync::Arc, time::Instant};
 use tracing::{info, warn};
