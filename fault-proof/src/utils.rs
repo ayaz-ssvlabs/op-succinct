@@ -6,6 +6,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 use crate::config::SP1ProverMode;
 
 /// Enum to hold either NetworkProver or CudaProver
+#[derive(Clone)]
 pub enum SP1ProverType {
     Network(Arc<NetworkProver>),
     Cuda(Arc<CudaProver>),

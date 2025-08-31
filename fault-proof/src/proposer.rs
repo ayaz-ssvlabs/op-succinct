@@ -95,7 +95,7 @@ where
     /// contract instance.
     pub async fn new(
         config: ProposerConfig,
-        network_private_key: String,
+        _network_private_key: String,
         prover_address: Address,
         signer: Signer,
         factory: DisputeGameFactoryInstance<P>,
