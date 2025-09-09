@@ -77,6 +77,7 @@ async fn main() -> Result<()> {
 
     let (_, vkey) = prover.setup(get_range_elf_embedded());
 
+    let proof_names = args.proofs.clone();
     let (proofs, boot_infos) = load_aggregation_proof_data(args.proofs, &vkey);
 
     let header = fetcher.get_latest_l1_head_in_batch(&boot_infos).await?;
@@ -93,7 +94,7 @@ async fn main() -> Result<()> {
 
     if args.prove {
         let proof = prover.prove(&agg_pk, &stdin).groth16().run().expect("proving failed");
-        let proof_path = format!("data/fetched_proofs/agg_proof_{}.bin", args.proofs.join("_"));
+        let proof_path = format!("data/fetched_proofs/agg_proof_{}.bin", proof_names.join("_"));
         proof.save(&proof_path).expect("failed to save aggregate proof to file");
         println!("Aggregate proof saved to: {}", proof_path);
     } else {
