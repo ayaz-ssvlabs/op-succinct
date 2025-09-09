@@ -93,7 +93,7 @@ async fn main() -> Result<()> {
 
     if args.prove {
         let proof = prover.prove(&agg_pk, &stdin).groth16().run().expect("proving failed");
-        let proof_path = format!("{}/agg_proof.bin", args.proofs);
+        let proof_path = format!("data/fetched_proofs/agg_proof_{}.bin", args.proofs.join("_"));
         proof.save(&proof_path).expect("failed to save aggregate proof to file");
         println!("Aggregate proof saved to: {}", proof_path);
     } else {
