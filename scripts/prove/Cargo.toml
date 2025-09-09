@@ -15,6 +15,10 @@ path = "bin/multi.rs"
 name = "agg"
 path = "bin/agg.rs"
 
+[[bin]]
+name = "inspect_agg"
+path = "bin/inspect_agg.rs"
+
 [dependencies]
 
 # workspace
@@ -25,6 +29,7 @@ anyhow.workspace = true
 dotenv.workspace = true
 csv.workspace = true
 tracing.workspace = true
+hex = "0.4"
 
 # local
 op-succinct-host-utils.workspace = true
