@@ -40,6 +40,7 @@ op-succinct-elfs.workspace = true
 
 # alloy
 alloy-primitives.workspace = true
+alloy-sol-types.workspace = true
 
 # sp1
 sp1-sdk.workspace = true

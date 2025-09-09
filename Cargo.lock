@@ -7490,6 +7490,7 @@ name = "op-succinct-prove"
 version = "3.0.0"
 dependencies = [
  "alloy-primitives",
+ "alloy-sol-types",
  "anyhow",
  "cargo_metadata",
  "clap",

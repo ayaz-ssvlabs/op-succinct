@@ -1,6 +1,7 @@
+use alloy_sol_types::SolValue;
 use anyhow::Result;
 use clap::Parser;
-use op_succinct_client_utils::boot::BootInfoStruct;
+use op_succinct_client_utils::boot::{BootInfoStruct, AGGREGATION_OUTPUTS_SIZE};
 use sp1_sdk::{utils, SP1ProofWithPublicValues};
 use std::fs;
 
@@ -38,8 +39,11 @@ fn inspect_aggregation_proof(proof_path: &str) -> Result<()> {
     // 2. Print aggregation output (public values)
     println!("\nPublic Values (Aggregation Output):");
     
-    // Try to read the public values as BootInfoStruct
-    let boot_info = proof_with_pv.public_values.read::<BootInfoStruct>();
+    // Read the public values as raw bytes and decode as BootInfoStruct (as done in fetch_and_save_proof.rs)
+    let mut raw_boot_info = [0u8; AGGREGATION_OUTPUTS_SIZE];
+    proof_with_pv.public_values.read_slice(&mut raw_boot_info);
+    let boot_info = BootInfoStruct::abi_decode(&raw_boot_info)
+        .map_err(|e| anyhow::anyhow!("Failed to decode boot info: {}", e))?;
     
     println!("   L1 Head: 0x{}", hex::encode(boot_info.l1Head));
     println!("   L2 Pre Root: 0x{}", hex::encode(boot_info.l2PreRoot));
