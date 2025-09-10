@@ -93,7 +93,7 @@ async fn main() -> Result<()> {
     println!("Aggregate ELF vKey: {:?}", agg_vk.vk.bytes32());
 
     if args.prove {
-        let proof = prover.prove(&agg_pk, &stdin).groth16().run().expect("proving failed");
+        let proof = prover.prove(&agg_pk, &stdin).compressed().run().expect("proving failed");
         let proof_path = format!("data/fetched_proofs/agg_proof_{}.bin", proof_names.join("_"));
         proof.save(&proof_path).expect("failed to save aggregate proof to file");
         println!("Aggregate proof saved to: {}", proof_path);

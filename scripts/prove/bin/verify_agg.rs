@@ -5,7 +5,7 @@ use clap::Parser;
 use op_succinct_client_utils::types::AggregationOutputs;
 use op_succinct_elfs::VERIFICATION_ELF;
 use serde::{Deserialize, Serialize};
-use sp1_sdk::{utils, HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin};
+use sp1_sdk::{utils, HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1Proof};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -31,7 +31,8 @@ struct Args {
 /// Load aggregation proof data from files
 fn load_verification_proof_data(
     proof_paths: Vec<String>,
-) -> Result<Vec<verification::AggregationProofData>> {
+) -> Result<(Vec<SP1Proof>, Vec<verification::AggregationProofData>)> {
+    let mut proofs = Vec::new();
     let mut proof_data = Vec::new();
 
     for proof_path in proof_paths {
@@ -39,7 +40,10 @@ fn load_verification_proof_data(
         let mut proof_with_pv = SP1ProofWithPublicValues::load(&proof_path)
             .map_err(|e| anyhow::anyhow!("Failed to load proof from {}: {}", proof_path, e))?;
 
-        // Extract proof bytes
+        // Extract SP1Proof for runtime writing
+        proofs.push(proof_with_pv.proof.clone());
+
+        // Extract proof bytes for data structure
         let proof_bytes = proof_with_pv.bytes();
 
         // Extract and decode public values
@@ -58,7 +62,7 @@ fn load_verification_proof_data(
         });
     }
 
-    Ok(proof_data)
+    Ok((proofs, proof_data))
 }
 
 #[tokio::main]
@@ -77,7 +81,7 @@ async fn main() -> Result<()> {
 
     // Load aggregation proof data
     println!("Loading {} aggregation proofs...", args.proofs.len());
-    let agg_proof_data = load_verification_proof_data(args.proofs)?;
+    let (agg_proofs, agg_proof_data) = load_verification_proof_data(args.proofs)?;
 
 
 
@@ -108,8 +112,21 @@ async fn main() -> Result<()> {
     // Setup SP1 client
     let client = ProverClient::from_env();
 
+    // Setup the aggregation ELF to get the proper verifying key
+    let (_, agg_vk) = client.setup(op_succinct_elfs::AGGREGATION_ELF);
+    
     // Create stdin for verification program
     let mut stdin = SP1Stdin::new();
+    
+    // Write each aggregation proof to the runtime first
+    for proof in &agg_proofs {
+        let SP1Proof::Compressed(compressed_proof) = proof else {
+            return Err(anyhow::anyhow!("Invalid proof passed as compressed proof!"));
+        };
+        stdin.write_proof(*compressed_proof.clone(), agg_vk.vk.clone());
+    }
+    
+    // Write the verification inputs (public values)
     stdin.write(&verification_inputs);
 
     println!("Start generating proof");
