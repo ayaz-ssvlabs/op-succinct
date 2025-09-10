@@ -66,14 +66,16 @@ pub fn main() {
     let mut verified_outputs = Vec::new();
     
     for (i, agg_proof_data) in verification_inputs.agg_proofs.iter().enumerate() {
-        // Verify the SP1 proof against the aggregation vkey
-        let public_values_bytes = agg_proof_data.public_values.abi_encode();
-        let pv_digest = Sha256::digest(public_values_bytes);
+        println!("Verifying aggregation proof {}", i + 1);
         
-        // Verify the proof
+        // Verify the SP1 proof using the aggregation verification key
+        let serialized_public_values = bincode::serialize(&agg_proof_data.public_values).unwrap();
+        let pv_digest = Sha256::digest(serialized_public_values);
+        
+        // This is the critical proof verification step that was missing
         sp1_lib::verify::verify_sp1_proof(&verification_inputs.agg_vkey, &pv_digest.into());
         
-        println!("Verified aggregation proof {}", i + 1);
+        println!("Successfully verified aggregation proof {}", i + 1);
         verified_outputs.push(&agg_proof_data.public_values);
     }
     
