@@ -19,6 +19,10 @@ path = "bin/agg.rs"
 name = "inspect_agg"
 path = "bin/inspect_agg.rs"
 
+[[bin]]
+name = "verify_agg"
+path = "bin/verify_agg.rs"
+
 [dependencies]
 
 # workspace
@@ -30,6 +34,8 @@ dotenv.workspace = true
 csv.workspace = true
 tracing.workspace = true
 hex = "0.4"
+serde.workspace = true
+bincode.workspace = true
 
 # local
 op-succinct-host-utils.workspace = true

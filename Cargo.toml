@@ -11,6 +11,7 @@ members = [
     "utils/ethereum/host",
     "programs/range/*",
     "programs/aggregation",
+    "programs/verification",
     "scripts/*",
     "validity",
     "fault-proof",
