@@ -31,22 +31,16 @@ pub struct AggregationProofData {
 /// Output structure for the verification program
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationOutputs {
-    /// The first L1 head from the sequence
-    pub initial_l1_head: B256,
-    /// The final L2 state root after all aggregations
-    pub final_l2_post_root: B256,
-    /// The final L2 block number
-    pub final_l2_block_number: u64,
-    /// The rollup config hash (should be consistent across all proofs)
-    pub rollup_config_hash: B256,
-    /// The multi-block verification key
-    pub multi_block_vkey: B256,
-    /// The prover address
-    pub prover_address: alloy_primitives::Address,
+    /// The aggregation verification key used
+    pub agg_vkey_hash: B256,
     /// Number of proofs verified
     pub proofs_verified: u64,
-    /// Total block range covered
-    pub total_blocks_covered: u64,
+    /// List of verified rollup config hashes
+    pub verified_rollup_configs: Vec<B256>,
+    /// List of verified prover addresses
+    pub verified_prover_addresses: Vec<alloy_primitives::Address>,
+    /// List of verified L2 block numbers
+    pub verified_l2_block_numbers: Vec<u64>,
 }
 
 pub fn main() {
@@ -81,68 +75,40 @@ pub fn main() {
     
     println!("cycle-tracker-end: proof-verification");
     
-    // Validate proof sequence continuity
-    println!("cycle-tracker-start: sequence-validation");
+    // Since proofs are from different L2 rollups, we don't validate continuity
+    // Each proof is independent and from its own rollup
+    println!("cycle-tracker-start: independent-validation");
     
-    for i in 1..verified_outputs.len() {
-        let prev = &verified_outputs[i - 1];
-        let curr = &verified_outputs[i];
-        
-        // Ensure the L2 post root of previous proof matches L2 pre root of current proof
-        assert_eq!(
-            prev.l2PostRoot, 
-            curr.l2PreRoot,
-            "L2 state continuity broken between proof {} and {}", i, i + 1
-        );
-        
-        // Ensure rollup config is consistent
-        assert_eq!(
-            prev.rollupConfigHash,
-            curr.rollupConfigHash,
-            "Rollup config mismatch between proof {} and {}", i, i + 1
-        );
-        
-        // Ensure multi-block vkey is consistent
-        assert_eq!(
-            prev.multiBlockVKey,
-            curr.multiBlockVKey,
-            "Multi-block vkey mismatch between proof {} and {}", i, i + 1
-        );
-        
-        // Ensure prover address is consistent
-        assert_eq!(
-            prev.proverAddress,
-            curr.proverAddress,
-            "Prover address mismatch between proof {} and {}", i, i + 1
-        );
-    }
+    println!("Verified {} independent rollup proofs", verified_outputs.len());
     
-    println!("cycle-tracker-end: sequence-validation");
+    println!("cycle-tracker-end: independent-validation");
     
     // Create final verification output
     println!("cycle-tracker-start: output-creation");
     
-    let first_proof = &verified_outputs[0];
-    let last_proof = &verified_outputs[verified_outputs.len() - 1];
+    // Collect data from all verified proofs (each from different rollups)
+    let mut verified_rollup_configs = Vec::new();
+    let mut verified_prover_addresses = Vec::new();
+    let mut verified_l2_block_numbers = Vec::new();
     
-    // Calculate total blocks covered
-    let total_blocks = if verified_outputs.len() == 1 {
-        // Single proof case - assume block range from block number
-        last_proof.l2BlockNumber
-    } else {
-        // Multiple proofs - calculate range
-        last_proof.l2BlockNumber - first_proof.l2BlockNumber + verified_outputs.len() as u64
-    };
+    for proof_output in verified_outputs {
+        verified_rollup_configs.push(proof_output.rollupConfigHash);
+        verified_prover_addresses.push(proof_output.proverAddress);
+        verified_l2_block_numbers.push(proof_output.l2BlockNumber);
+    }
+    
+    // Convert agg_vkey to B256 hash for output
+    let agg_vkey_bytes = verification_inputs.agg_vkey.iter()
+        .flat_map(|&x| x.to_be_bytes())
+        .collect::<Vec<u8>>();
+    let agg_vkey_hash = B256::from(Sha256::digest(&agg_vkey_bytes).into());
     
     let verification_output = VerificationOutputs {
-        initial_l1_head: first_proof.l1Head,
-        final_l2_post_root: last_proof.l2PostRoot,
-        final_l2_block_number: last_proof.l2BlockNumber,
-        rollup_config_hash: first_proof.rollupConfigHash,
-        multi_block_vkey: first_proof.multiBlockVKey,
-        prover_address: first_proof.proverAddress,
+        agg_vkey_hash,
         proofs_verified: verified_outputs.len() as u64,
-        total_blocks_covered: total_blocks,
+        verified_rollup_configs,
+        verified_prover_addresses,
+        verified_l2_block_numbers,
     };
     
     println!("cycle-tracker-end: output-creation");
@@ -150,7 +116,8 @@ pub fn main() {
     // Commit the verification output
     sp1_zkvm::io::commit(&verification_output);
     
-    println!("Successfully verified {} aggregation proofs covering {} total blocks", 
-             verification_output.proofs_verified, 
-             verification_output.total_blocks_covered);
+    println!("Successfully verified {} independent rollup aggregation proofs", 
+             verification_output.proofs_verified);
+    println!("Verified rollups: {:?}", verification_output.verified_rollup_configs);
+    println!("Aggregation vkey hash: 0x{}", hex::encode(verification_output.agg_vkey_hash));
 }
