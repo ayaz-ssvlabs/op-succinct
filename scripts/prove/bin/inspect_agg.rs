@@ -1,7 +1,8 @@
 use alloy_sol_types::SolValue;
 use anyhow::Result;
 use clap::Parser;
-use op_succinct_client_utils::boot::{BootInfoStruct, AGGREGATION_OUTPUTS_SIZE};
+use op_succinct_client_utils::boot::AGGREGATION_OUTPUTS_SIZE;
+use op_succinct_client_utils::types::AggregationOutputs;
 use sp1_sdk::{utils, SP1ProofWithPublicValues};
 use std::fs;
 
@@ -39,23 +40,27 @@ fn inspect_aggregation_proof(proof_path: &str) -> Result<()> {
     // 2. Print aggregation output (public values)
     println!("\nPublic Values (Aggregation Output):");
     
-    // Read the public values as raw bytes and decode as BootInfoStruct (as done in fetch_and_save_proof.rs)
-    let mut raw_boot_info = [0u8; AGGREGATION_OUTPUTS_SIZE];
-    proof_with_pv.public_values.read_slice(&mut raw_boot_info);
-    let boot_info = BootInfoStruct::abi_decode(&raw_boot_info)
-        .map_err(|e| anyhow::anyhow!("Failed to decode boot info: {}", e))?;
+    // Read the public values as raw bytes and decode as AggregationOutputs
+    let mut raw_agg_outputs = [0u8; AGGREGATION_OUTPUTS_SIZE];
+    proof_with_pv.public_values.read_slice(&mut raw_agg_outputs);
+    let agg_outputs = AggregationOutputs::abi_decode(&raw_agg_outputs)
+        .map_err(|e| anyhow::anyhow!("Failed to decode aggregation outputs: {}", e))?;
     
-    println!("   L1 Head: 0x{}", hex::encode(boot_info.l1Head));
-    println!("   L2 Pre Root: 0x{}", hex::encode(boot_info.l2PreRoot));
-    println!("   L2 Post Root: 0x{}", hex::encode(boot_info.l2PostRoot));
-    println!("   L2 Block Number: {}", boot_info.l2BlockNumber);
-    println!("   Rollup Config Hash: 0x{}", hex::encode(boot_info.rollupConfigHash));
+    println!("   L1 Head: 0x{}", hex::encode(agg_outputs.l1Head));
+    println!("   L2 Pre Root: 0x{}", hex::encode(agg_outputs.l2PreRoot));
+    println!("   L2 Post Root: 0x{}", hex::encode(agg_outputs.l2PostRoot));
+    println!("   L2 Block Number: {}", agg_outputs.l2BlockNumber);
+    println!("   Rollup Config Hash: 0x{}", hex::encode(agg_outputs.rollupConfigHash));
+    println!("   Multi Block VKey: 0x{}", hex::encode(agg_outputs.multiBlockVKey));
+    println!("   Prover Address: 0x{}", hex::encode(agg_outputs.proverAddress));
     
     println!("\n   Formatted Values:");
-    println!("   L1 Head (B256): {}", boot_info.l1Head);
-    println!("   L2 Pre Root (B256): {}", boot_info.l2PreRoot);
-    println!("   L2 Post Root (B256): {}", boot_info.l2PostRoot);
-    println!("   Rollup Config Hash (B256): {}", boot_info.rollupConfigHash);
+    println!("   L1 Head (B256): {}", agg_outputs.l1Head);
+    println!("   L2 Pre Root (B256): {}", agg_outputs.l2PreRoot);
+    println!("   L2 Post Root (B256): {}", agg_outputs.l2PostRoot);
+    println!("   Rollup Config Hash (B256): {}", agg_outputs.rollupConfigHash);
+    println!("   Multi Block VKey (B256): {}", agg_outputs.multiBlockVKey);
+    println!("   Prover Address: {}", agg_outputs.proverAddress);
 
     // 3. Print Groth16 proof details
     println!("\nGroth16 Proof Details:");
