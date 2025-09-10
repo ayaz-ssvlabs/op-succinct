@@ -1,8 +1,7 @@
 use alloy_sol_types::SolValue;
 use anyhow::Result;
 use clap::Parser;
-use op_succinct_client_utils::boot::AGGREGATION_OUTPUTS_SIZE;
-use op_succinct_client_utils::types::AggregationOutputs;
+use op_succinct_client_utils::{boot::BootInfoStruct, types::AggregationOutputs};
 use sp1_sdk::{utils, SP1ProofWithPublicValues};
 use std::fs;
 
@@ -40,11 +39,35 @@ fn inspect_aggregation_proof(proof_path: &str) -> Result<()> {
     // 2. Print aggregation output (public values)
     println!("\nPublic Values (Aggregation Output):");
     
-    // Read the public values as raw bytes and decode as AggregationOutputs
-    let mut raw_agg_outputs = [0u8; AGGREGATION_OUTPUTS_SIZE];
-    proof_with_pv.public_values.read_slice(&mut raw_agg_outputs);
-    let agg_outputs = AggregationOutputs::abi_decode(&raw_agg_outputs)
-        .map_err(|e| anyhow::anyhow!("Failed to decode aggregation outputs: {}", e))?;
+    // Debug: Print raw public values first to understand the structure
+    let mut debug_buffer = [0u8; 192];  // Start with original size
+    proof_with_pv.public_values.read_slice(&mut debug_buffer);
+    println!("   Raw public values (192 bytes): 0x{}", hex::encode(&debug_buffer));
+    
+    // Try decoding as AggregationOutputs
+    let agg_outputs = match AggregationOutputs::abi_decode(&debug_buffer) {
+        Ok(outputs) => outputs,
+        Err(e) => {
+            println!("   Failed to decode as AggregationOutputs: {}", e);
+            println!("   This might be a BootInfoStruct instead. Let me try that...");
+            
+            // Fallback: try to decode as BootInfoStruct for debugging
+            match BootInfoStruct::abi_decode(&debug_buffer) {
+                Ok(boot_info) => {
+                    println!("   Successfully decoded as BootInfoStruct:");
+                    println!("   L1 Head: 0x{}", hex::encode(boot_info.l1Head));
+                    println!("   L2 Pre Root: 0x{}", hex::encode(boot_info.l2PreRoot)); 
+                    println!("   L2 Post Root: 0x{}", hex::encode(boot_info.l2PostRoot));
+                    println!("   L2 Block Number: {}", boot_info.l2BlockNumber);
+                    println!("   Rollup Config Hash: 0x{}", hex::encode(boot_info.rollupConfigHash));
+                    return Ok(());
+                }
+                Err(e2) => {
+                    return Err(anyhow::anyhow!("Failed to decode as both AggregationOutputs and BootInfoStruct. AggregationOutputs error: {}. BootInfoStruct error: {}", e, e2));
+                }
+            }
+        }
+    };
     
     println!("   L1 Head: 0x{}", hex::encode(agg_outputs.l1Head));
     println!("   L2 Pre Root: 0x{}", hex::encode(agg_outputs.l2PreRoot));
