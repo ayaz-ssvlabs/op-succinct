@@ -4,8 +4,7 @@
 #[cfg(target_os = "zkvm")]
 sp1_zkvm::entrypoint!(main);
 
-use alloy_primitives::B256;
-use alloy_sol_types::SolValue;
+use alloy_primitives::{B256, hex};
 use op_succinct_client_utils::types::AggregationOutputs;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -31,16 +30,12 @@ pub struct AggregationProofData {
 /// Output structure for the verification program
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationOutputs {
-    /// The aggregation verification key used
-    pub agg_vkey_hash: B256,
+    /// The aggregation verification key
+    pub aggr_vkey: B256,
     /// Number of proofs verified
     pub proofs_verified: u64,
-    /// List of verified rollup config hashes
-    pub verified_rollup_configs: Vec<B256>,
-    /// List of verified prover addresses
-    pub verified_prover_addresses: Vec<alloy_primitives::Address>,
-    /// List of verified L2 block numbers
-    pub verified_l2_block_numbers: Vec<u64>,
+    /// Internal structure holding all proofs outputs
+    pub proofs_outputs: Vec<AggregationOutputs>,
 }
 
 pub fn main() {
@@ -86,29 +81,19 @@ pub fn main() {
     // Create final verification output
     println!("cycle-tracker-start: output-creation");
     
-    // Collect data from all verified proofs (each from different rollups)
-    let mut verified_rollup_configs = Vec::new();
-    let mut verified_prover_addresses = Vec::new();
-    let mut verified_l2_block_numbers = Vec::new();
-    
-    for proof_output in verified_outputs {
-        verified_rollup_configs.push(proof_output.rollupConfigHash);
-        verified_prover_addresses.push(proof_output.proverAddress);
-        verified_l2_block_numbers.push(proof_output.l2BlockNumber);
-    }
-    
-    // Convert agg_vkey to B256 hash for output
+    // Convert agg_vkey to B256 for output
     let agg_vkey_bytes = verification_inputs.agg_vkey.iter()
         .flat_map(|&x| x.to_be_bytes())
         .collect::<Vec<u8>>();
-    let agg_vkey_hash = B256::from(Sha256::digest(&agg_vkey_bytes).into());
+    let aggr_vkey = B256::from_slice(&Sha256::digest(&agg_vkey_bytes));
+    
+    // Collect all verified proof outputs
+    let proofs_outputs = verified_outputs.iter().map(|&output| output.clone()).collect();
     
     let verification_output = VerificationOutputs {
-        agg_vkey_hash,
+        aggr_vkey,
         proofs_verified: verified_outputs.len() as u64,
-        verified_rollup_configs,
-        verified_prover_addresses,
-        verified_l2_block_numbers,
+        proofs_outputs,
     };
     
     println!("cycle-tracker-end: output-creation");
@@ -118,6 +103,6 @@ pub fn main() {
     
     println!("Successfully verified {} independent rollup aggregation proofs", 
              verification_output.proofs_verified);
-    println!("Verified rollups: {:?}", verification_output.verified_rollup_configs);
-    println!("Aggregation vkey hash: 0x{}", hex::encode(verification_output.agg_vkey_hash));
+    println!("Verified rollups: {:?}", verification_output.proofs_outputs.iter().map(|output| output.rollupConfigHash).collect::<Vec<_>>());
+    println!("Aggregation vkey hash: 0x{}", hex::encode(verification_output.aggr_vkey));
 }

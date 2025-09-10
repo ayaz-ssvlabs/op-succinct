@@ -1,0 +1,23 @@
+{
+  "lib/openzeppelin-contracts-upgradeable": {
+    "rev": "0a2cb9a445c365870ed7a8ab461b12acf3e27d63"
+  },
+  "lib/lib-keccak": {
+    "rev": "3b1e7bbb4cc23e9228097cfebe42aedaf3b8f2b9"
+  },
+  "lib/forge-std": {
+    "rev": "2b59872eee0b8088ddcade39fe8c041e17bb79c0"
+  },
+  "lib/solady": {
+    "rev": "502cc1ea718e6fa73b380635ee0868b0740595f0"
+  },
+  "lib/optimism": {
+    "rev": "70fa4491f45b3d5d493394da2a154e3f22b61a5a"
+  },
+  "lib/sp1-contracts": {
+    "rev": "90d99052cf7880fe521f5fb0974b9c51056f9619"
+  },
+  "lib/openzeppelin-contracts": {
+    "rev": "ecd2ca2cd7cac116f7a37d0e474bbb3d7d5e1c4d"
+  }
+}

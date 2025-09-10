@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
             .expect("Failed to get agg proof stdin");
 
     let (agg_pk, agg_vk) = prover.setup(AGGREGATION_ELF);
-    println!("Aggregate ELF Verification Key: {:?}", agg_vk.vk.bytes32());
+    println!("Aggregate ELF vKey: {:?}", agg_vk.vk.bytes32());
 
     if args.prove {
         let proof = prover.prove(&agg_pk, &stdin).groth16().run().expect("proving failed");

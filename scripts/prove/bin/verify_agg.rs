@@ -80,22 +80,19 @@ async fn main() -> Result<()> {
     let agg_proof_data = load_verification_proof_data(args.proofs)?;
 
     // Parse aggregation verification key from hex string
-    println!("Using aggregation verification key: {}", args.agg_vkey);
     let agg_vkey_hex = if args.agg_vkey.starts_with("0x") {
         &args.agg_vkey[2..]
     } else {
         &args.agg_vkey
     };
     
-    let agg_vkey_bytes = hex::decode(agg_vkey_hex)
+    let _agg_vkey_bytes = hex::decode(agg_vkey_hex)
         .map_err(|e| anyhow::anyhow!("Failed to decode aggregation vkey hex: {}", e))?;
     
     // For now, we'll just use a placeholder vkey array. In a real implementation,
     // you would properly convert the vkey bytes to the required format
     let agg_vkey_array: [u32; 8] = [0; 8]; // Placeholder
     
-    println!("Aggregation verification key loaded successfully ({} bytes)", agg_vkey_bytes.len());
-
     // Create verification inputs for the ZK program
     let verification_inputs = verification::VerificationInputs {
         agg_proofs: agg_proof_data.clone(),
@@ -109,18 +106,18 @@ async fn main() -> Result<()> {
     let mut stdin = SP1Stdin::new();
     stdin.write(&verification_inputs);
 
-    println!("Generating ZK verification proof (Groth16)...");
+    println!("Start generating proof");
     
     // Setup the verification program
     let (verification_pk, verification_vk) = client.setup(VERIFICATION_ELF);
-    println!("Verification ELF Verification Key: {:?}", verification_vk.vk.bytes32());
+    println!("Verification ELF vKey: {:?}", verification_vk.vk.bytes32());
     
     // Generate the ZK proof that proves aggregation verification (Groth16)
     let proof = client
         .prove(&verification_pk, &stdin)
         .groth16()
         .run()
-        .expect("Failed to generate verification proof");
+        .expect("Failed to generate proof");
 
     // Save the verification proof
     let verification_proof_names: Vec<String> = agg_proof_data
@@ -145,23 +142,24 @@ async fn main() -> Result<()> {
     let mut verification_output_proof = proof;
     let verification_output: verification::VerificationOutputs = verification_output_proof.public_values.read();
     
-    println!("\nZK Verification Proof Generated Successfully!");
-    println!("============================================");
-    println!("Proof Type: Groth16 (ready for on-chain verification)");
+    println!("Proof Type: Groth16");
     println!("Proof saved to: {}", verification_proof_path);
     println!("Proofs verified: {}", verification_output.proofs_verified);
-    println!("Total blocks covered: {}", verification_output.total_blocks_covered);
-    println!("Final L2 block number: {}", verification_output.final_l2_block_number);
-    println!("Final L2 post root: 0x{}", hex::encode(verification_output.final_l2_post_root));
-    println!("Multi-block VKey: 0x{}", hex::encode(verification_output.multi_block_vkey));
-    println!("Prover address: {}", verification_output.prover_address);
+    println!("Aggregation VKey: 0x{}", hex::encode(verification_output.aggr_vkey));
+    println!("Verified proofs outputs:");
+    for (i, proof_output) in verification_output.proofs_outputs.iter().enumerate() {
+        println!("  Proof {}: Block {} (Root: 0x{})", 
+                 i + 1, 
+                 proof_output.l2BlockNumber, 
+                 hex::encode(proof_output.l2PostRoot));
+    }
 
     Ok(())
 }
 
 // Include the verification program types
 mod verification {
-    pub use super::*;
+    use super::*;
     
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct VerificationInputs {
@@ -177,13 +175,8 @@ mod verification {
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct VerificationOutputs {
-        pub initial_l1_head: alloy_primitives::B256,
-        pub final_l2_post_root: alloy_primitives::B256,
-        pub final_l2_block_number: u64,
-        pub rollup_config_hash: alloy_primitives::B256,
-        pub multi_block_vkey: alloy_primitives::B256,
-        pub prover_address: alloy_primitives::Address,
+        pub aggr_vkey: alloy_primitives::B256,
         pub proofs_verified: u64,
-        pub total_blocks_covered: u64,
+        pub proofs_outputs: Vec<AggregationOutputs>,
     }
 }
