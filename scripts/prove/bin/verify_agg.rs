@@ -79,21 +79,27 @@ async fn main() -> Result<()> {
     println!("Loading {} aggregation proofs...", args.proofs.len());
     let agg_proof_data = load_verification_proof_data(args.proofs)?;
 
-    // Parse aggregation verification key from hex string
+
+
+
     let agg_vkey_hex = if args.agg_vkey.starts_with("0x") {
         &args.agg_vkey[2..]
     } else {
         &args.agg_vkey
     };
-    
-    let _agg_vkey_bytes = hex::decode(agg_vkey_hex)
+
+    let agg_vkey_bytes = hex::decode(agg_vkey_hex)
         .map_err(|e| anyhow::anyhow!("Failed to decode aggregation vkey hex: {}", e))?;
-    
-    // For now, we'll just use a placeholder vkey array. In a real implementation,
-    // you would properly convert the vkey bytes to the required format
-    let agg_vkey_array: [u32; 8] = [0; 8]; // Placeholder
-    
-    // Create verification inputs for the ZK program
+
+    if agg_vkey_bytes.len() != 32 {
+        anyhow::bail!("Aggregation vkey must be 32 bytes long, but was {} bytes", agg_vkey_bytes.len());
+    }
+
+    let mut agg_vkey_array = [0u32; 8];
+    for (i, chunk) in agg_vkey_bytes.chunks_exact(4).enumerate() {
+        agg_vkey_array[i] = u32::from_be_bytes(chunk.try_into().unwrap());
+    }
+
     let verification_inputs = verification::VerificationInputs {
         agg_proofs: agg_proof_data.clone(),
         agg_vkey: agg_vkey_array,
