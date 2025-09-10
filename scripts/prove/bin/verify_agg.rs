@@ -5,7 +5,6 @@ use clap::Parser;
 use op_succinct_client_utils::types::AggregationOutputs;
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{utils, SP1ProofWithPublicValues};
-use std::fs;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -14,9 +13,9 @@ struct Args {
     #[arg(short, long, num_args = 1.., value_delimiter = ',')]
     proofs: Vec<String>,
 
-    /// Aggregation verification key file path
+    /// Aggregation verification key (hex string)
     #[arg(short, long)]
-    agg_vkey_path: String,
+    agg_vkey: String,
 
     /// Prover address for verification
     #[arg(short = 'r', long)]
@@ -82,12 +81,18 @@ async fn main() -> Result<()> {
     println!("Loading {} aggregation proofs...", args.proofs.len());
     let agg_proof_data = load_verification_proof_data(args.proofs)?;
 
-    // Load aggregation verification key (for future ZK verification)
-    println!("Loading aggregation verification key from: {}", args.agg_vkey_path);
-    let agg_vkey_bytes = fs::read(&args.agg_vkey_path)
-        .map_err(|e| anyhow::anyhow!("Failed to read aggregation vkey: {}", e))?;
-    let _agg_vkey: sp1_sdk::SP1VerifyingKey = bincode::deserialize(&agg_vkey_bytes)
-        .map_err(|e| anyhow::anyhow!("Failed to deserialize aggregation vkey: {}", e))?;
+    // Parse aggregation verification key from hex string
+    println!("Using aggregation verification key: {}", args.agg_vkey);
+    let agg_vkey_hex = if args.agg_vkey.starts_with("0x") {
+        &args.agg_vkey[2..]
+    } else {
+        &args.agg_vkey
+    };
+    
+    let _agg_vkey_bytes = hex::decode(agg_vkey_hex)
+        .map_err(|e| anyhow::anyhow!("Failed to decode aggregation vkey hex: {}", e))?;
+    
+    println!("Aggregation verification key loaded successfully ({} bytes)", _agg_vkey_bytes.len());
 
     // Validate proof sequence continuity (same logic as in the ZK program)
     println!("Validating proof sequence continuity...");
