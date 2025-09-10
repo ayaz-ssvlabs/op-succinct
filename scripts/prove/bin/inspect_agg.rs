@@ -1,7 +1,7 @@
 use alloy_sol_types::SolValue;
 use anyhow::Result;
 use clap::Parser;
-use op_succinct_client_utils::{boot::BootInfoStruct, types::AggregationOutputs};
+use op_succinct_client_utils::boot::{BootInfoStruct, AGGREGATION_OUTPUTS_SIZE};
 use sp1_sdk::{utils, SP1ProofWithPublicValues};
 use std::fs;
 
@@ -39,51 +39,25 @@ fn inspect_aggregation_proof(proof_path: &str) -> Result<()> {
     // 2. Print aggregation output (public values)
     println!("\nPublic Values (Aggregation Output):");
     
-    // Debug: Print raw public values first to understand the structure
-    let mut debug_buffer = [0u8; 192];  // Start with original size
-    proof_with_pv.public_values.read_slice(&mut debug_buffer);
-    println!("   Raw public values (192 bytes): 0x{}", hex::encode(&debug_buffer));
+    // Aggregation proofs store BootInfoStruct as public values (based on fetch_and_save_proof.rs)
+    const BOOT_INFO_SIZE: usize = 5 * 32; // 5 fields, each padded to 32 bytes in ABI = 160 bytes
+    let mut raw_boot_info = [0u8; BOOT_INFO_SIZE];
+    proof_with_pv.public_values.read_slice(&mut raw_boot_info);
     
-    // Try decoding as AggregationOutputs
-    let agg_outputs = match AggregationOutputs::abi_decode(&debug_buffer) {
-        Ok(outputs) => outputs,
-        Err(e) => {
-            println!("   Failed to decode as AggregationOutputs: {}", e);
-            println!("   This might be a BootInfoStruct instead. Let me try that...");
-            
-            // Fallback: try to decode as BootInfoStruct for debugging
-            match BootInfoStruct::abi_decode(&debug_buffer) {
-                Ok(boot_info) => {
-                    println!("   Successfully decoded as BootInfoStruct:");
-                    println!("   L1 Head: 0x{}", hex::encode(boot_info.l1Head));
-                    println!("   L2 Pre Root: 0x{}", hex::encode(boot_info.l2PreRoot)); 
-                    println!("   L2 Post Root: 0x{}", hex::encode(boot_info.l2PostRoot));
-                    println!("   L2 Block Number: {}", boot_info.l2BlockNumber);
-                    println!("   Rollup Config Hash: 0x{}", hex::encode(boot_info.rollupConfigHash));
-                    return Ok(());
-                }
-                Err(e2) => {
-                    return Err(anyhow::anyhow!("Failed to decode as both AggregationOutputs and BootInfoStruct. AggregationOutputs error: {}. BootInfoStruct error: {}", e, e2));
-                }
-            }
-        }
-    };
+    let boot_info = BootInfoStruct::abi_decode(&raw_boot_info)
+        .map_err(|e| anyhow::anyhow!("Failed to decode boot info: {}", e))?;
     
-    println!("   L1 Head: 0x{}", hex::encode(agg_outputs.l1Head));
-    println!("   L2 Pre Root: 0x{}", hex::encode(agg_outputs.l2PreRoot));
-    println!("   L2 Post Root: 0x{}", hex::encode(agg_outputs.l2PostRoot));
-    println!("   L2 Block Number: {}", agg_outputs.l2BlockNumber);
-    println!("   Rollup Config Hash: 0x{}", hex::encode(agg_outputs.rollupConfigHash));
-    println!("   Multi Block VKey: 0x{}", hex::encode(agg_outputs.multiBlockVKey));
-    println!("   Prover Address: 0x{}", hex::encode(agg_outputs.proverAddress));
+    println!("   L1 Head: 0x{}", hex::encode(boot_info.l1Head));
+    println!("   L2 Pre Root: 0x{}", hex::encode(boot_info.l2PreRoot));
+    println!("   L2 Post Root: 0x{}", hex::encode(boot_info.l2PostRoot));
+    println!("   L2 Block Number: {}", boot_info.l2BlockNumber);
+    println!("   Rollup Config Hash: 0x{}", hex::encode(boot_info.rollupConfigHash));
     
     println!("\n   Formatted Values:");
-    println!("   L1 Head (B256): {}", agg_outputs.l1Head);
-    println!("   L2 Pre Root (B256): {}", agg_outputs.l2PreRoot);
-    println!("   L2 Post Root (B256): {}", agg_outputs.l2PostRoot);
-    println!("   Rollup Config Hash (B256): {}", agg_outputs.rollupConfigHash);
-    println!("   Multi Block VKey (B256): {}", agg_outputs.multiBlockVKey);
-    println!("   Prover Address: {}", agg_outputs.proverAddress);
+    println!("   L1 Head (B256): {}", boot_info.l1Head);
+    println!("   L2 Pre Root (B256): {}", boot_info.l2PreRoot);
+    println!("   L2 Post Root (B256): {}", boot_info.l2PostRoot);
+    println!("   Rollup Config Hash (B256): {}", boot_info.rollupConfigHash);
 
     // 3. Print Groth16 proof details
     println!("\nGroth16 Proof Details:");
