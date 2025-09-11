@@ -108,11 +108,13 @@ async fn main() -> Result<()> {
 
     // Setup the aggregation ELF to get the proper verifying key
     let (_, agg_vk) = client.setup(op_succinct_elfs::AGGREGATION_ELF);
+    println!("Current Aggregation ELF vKey: {:?}", agg_vk.vk.bytes32());
     
     // Create stdin for verification program
     let mut stdin = SP1Stdin::new();
     
     // Write each aggregation proof to the runtime first
+    // Note: These are aggregation proofs, so we use the aggregation vkey
     for proof in &agg_proofs {
         let SP1Proof::Compressed(compressed_proof) = proof else {
             return Err(anyhow::anyhow!("Expected compressed proof, but got different proof type!"));
