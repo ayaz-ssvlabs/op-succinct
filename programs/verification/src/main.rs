@@ -5,6 +5,7 @@
 sp1_zkvm::entrypoint!(main);
 
 use alloy_primitives::{B256, hex};
+use alloy_sol_types::SolValue;
 use op_succinct_client_utils::types::AggregationOutputs;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -49,8 +50,9 @@ pub fn main() {
         println!("Verifying aggregation proof {}", i + 1);
         
         // Verify the SP1 proof using the aggregation verification key
-        let serialized_public_values = bincode::serialize(public_values).unwrap();
-        let pv_digest = Sha256::digest(serialized_public_values);
+        // The aggregation program commits using abi_encode, so we need to match that
+        let abi_encoded_public_values = public_values.abi_encode();
+        let pv_digest = Sha256::digest(abi_encoded_public_values);
 
         // This is the critical proof verification step
         // The actual proof is provided via write_proof() in the host
