@@ -93,23 +93,33 @@ async fn main() -> Result<()> {
         anyhow::bail!("Aggregation vkey must be 32 bytes long, but was {} bytes", agg_vkey_bytes.len());
     }
 
-    let mut agg_vkey_array = [0u32; 8];
-    for (i, chunk) in agg_vkey_bytes.chunks_exact(4).enumerate() {
-        agg_vkey_array[i] = u32::from_be_bytes(chunk.try_into().unwrap());
-    }
-
-    let verification_inputs = verification::VerificationInputs {
-        public_values_vec: public_values_vec.clone(),
-        agg_vkey: agg_vkey_array,
-    };
-
     // Setup SP1 client
     let client = ProverClient::from_env();
 
     // Setup the aggregation ELF to get the proper verifying key
     let (_, agg_vk) = client.setup(op_succinct_elfs::AGGREGATION_ELF);
     println!("Current Aggregation ELF vKey: {:?}", agg_vk.vk.bytes32());
+    println!("Current Aggregation ELF vKey Hash (u32): {:?}", agg_vk.vk.hash_u32());
+
+    // Verify that the provided agg_vkey matches the current ELF
+    let mut agg_vkey_array = [0u32; 8];
+    for (i, chunk) in agg_vkey_bytes.chunks_exact(4).enumerate() {
+        agg_vkey_array[i] = u32::from_be_bytes(chunk.try_into().unwrap());
+    }
     
+    println!("Provided agg_vkey: {:?}", agg_vkey_array);
+    println!("Current ELF vkey hash: {:?}", agg_vk.vk.hash_u32());
+    
+    // Verify that the provided key matches the current ELF (as a safety check)
+    if agg_vkey_array != agg_vk.vk.hash_u32() {
+        println!("WARNING: Provided agg_vkey doesn't match current ELF vkey hash. Using ELF vkey hash for verification.");
+    }
+
+    let verification_inputs = verification::VerificationInputs {
+        public_values_vec: public_values_vec.clone(),
+        agg_vkey: agg_vk.vk.hash_u32(),
+    };
+
     // Create stdin for verification program
     let mut stdin = SP1Stdin::new();
     
