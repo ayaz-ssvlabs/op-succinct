@@ -15,6 +15,8 @@ use sha2::{Digest, Sha256};
 pub struct VerificationInputs {
     /// The public values from aggregation proofs to verify
     pub public_values_vec: Vec<AggregationOutputs>,
+    /// The raw committed public values bytes (as committed by aggregation program)
+    pub raw_public_values_vec: Vec<Vec<u8>>,
     /// The aggregation verification key
     pub agg_vkey: [u32; 8],
 }
@@ -46,16 +48,18 @@ pub fn main() {
     
     let mut verified_outputs = Vec::new();
     
-    for (i, public_values) in verification_inputs.public_values_vec.iter().enumerate() {
+    for (i, (public_values, raw_public_values)) in verification_inputs.public_values_vec.iter()
+        .zip(verification_inputs.raw_public_values_vec.iter()).enumerate() {
         println!("Verifying aggregation proof {}", i + 1);
         
-        // Verify the SP1 proof using the aggregation verification key
-        // The aggregation program commits using abi_encode, so we need to match that
-        let abi_encoded_public_values = public_values.abi_encode();
-        let pv_digest = Sha256::digest(abi_encoded_public_values);
+        // Use the raw public values exactly as they were committed by the aggregation program
+        // This should match exactly what SP1's commit_slice() produced
+        let pv_digest = Sha256::digest(raw_public_values);
+        
+        println!("Raw committed data length: {}", raw_public_values.len());
+        println!("Computed digest: {:?}", hex::encode(pv_digest));
 
         // This is the critical proof verification step
-        // The actual proof is provided via write_proof() in the host
         sp1_lib::verify::verify_sp1_proof(&verification_inputs.agg_vkey, &pv_digest.into());
 
         println!("Successfully verified aggregation proof {}", i + 1);

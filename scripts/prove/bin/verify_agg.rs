@@ -6,6 +6,7 @@ use op_succinct_client_utils::types::AggregationOutputs;
 use op_succinct_elfs::VERIFICATION_ELF;
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{utils, HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1Proof};
+use hex;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -31,9 +32,10 @@ struct Args {
 /// Load aggregation proof data from files
 fn load_verification_proof_data(
     proof_paths: Vec<String>,
-) -> Result<(Vec<SP1Proof>, Vec<AggregationOutputs>)> {
+) -> Result<(Vec<SP1Proof>, Vec<AggregationOutputs>, Vec<Vec<u8>>)> {
     let mut proofs = Vec::new();
     let mut public_values_vec = Vec::new();
+    let mut raw_public_values_vec = Vec::new();
 
     for proof_path in proof_paths {
         // Load the aggregation proof
@@ -52,11 +54,19 @@ fn load_verification_proof_data(
             .map_err(|e| anyhow::anyhow!("Failed to decode aggregation outputs: {}", e))?;
 
         println!("Loaded proof: {} (Block: {})", proof_path, agg_outputs.l2BlockNumber);
+        println!("Raw public values length: {}", raw_agg_outputs.len());
+        println!("Raw public values: {}", hex::encode(&raw_agg_outputs));
+        
+        // Test: re-encode and see if it matches
+        let re_encoded = agg_outputs.abi_encode();
+        println!("Re-encoded length: {}", re_encoded.len());
+        println!("Re-encoded matches raw: {}", re_encoded == raw_agg_outputs);
 
         public_values_vec.push(agg_outputs);
+        raw_public_values_vec.push(raw_agg_outputs.to_vec());
     }
 
-    Ok((proofs, public_values_vec))
+    Ok((proofs, public_values_vec, raw_public_values_vec))
 }
 
 #[tokio::main]
@@ -75,7 +85,7 @@ async fn main() -> Result<()> {
 
     // Load aggregation proof data
     println!("Loading {} aggregation proofs...", args.proofs.len());
-    let (agg_proofs, public_values_vec) = load_verification_proof_data(args.proofs)?;
+    let (agg_proofs, public_values_vec, raw_public_values_vec) = load_verification_proof_data(args.proofs)?;
 
 
 
@@ -117,6 +127,7 @@ async fn main() -> Result<()> {
 
     let verification_inputs = verification::VerificationInputs {
         public_values_vec: public_values_vec.clone(),
+        raw_public_values_vec: raw_public_values_vec.clone(),
         agg_vkey: agg_vk.vk.hash_u32(),
     };
 
@@ -193,6 +204,7 @@ mod verification {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct VerificationInputs {
         pub public_values_vec: Vec<AggregationOutputs>,
+        pub raw_public_values_vec: Vec<Vec<u8>>,
         pub agg_vkey: [u32; 8],
     }
 
