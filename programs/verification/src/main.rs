@@ -12,19 +12,10 @@ use sha2::{Digest, Sha256};
 /// Input structure for the verification program
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationInputs {
-    /// The aggregation proofs to verify
-    pub agg_proofs: Vec<AggregationProofData>,
+    /// The public values from aggregation proofs to verify
+    pub public_values_vec: Vec<AggregationOutputs>,
     /// The aggregation verification key
     pub agg_vkey: [u32; 8],
-}
-
-/// Aggregation proof data
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AggregationProofData {
-    /// The SP1 proof (compressed)
-    pub proof: Vec<u8>,
-    /// The public values (AggregationOutputs)
-    pub public_values: AggregationOutputs,
 }
 
 /// Output structure for the verification program
@@ -45,7 +36,7 @@ pub fn main() {
     println!("cycle-tracker-start: verification-setup");
     
     // Validate that we have at least one proof
-    assert!(!verification_inputs.agg_proofs.is_empty(), "No aggregation proofs provided");
+    assert!(!verification_inputs.public_values_vec.is_empty(), "No aggregation proofs provided");
     
     println!("cycle-tracker-end: verification-setup");
     
@@ -54,19 +45,19 @@ pub fn main() {
     
     let mut verified_outputs = Vec::new();
     
-    for (i, agg_proof_data) in verification_inputs.agg_proofs.iter().enumerate() {
+    for (i, public_values) in verification_inputs.public_values_vec.iter().enumerate() {
         println!("Verifying aggregation proof {}", i + 1);
         
         // Verify the SP1 proof using the aggregation verification key
-        let serialized_public_values = bincode::serialize(&agg_proof_data.public_values).unwrap();
+        let serialized_public_values = bincode::serialize(public_values).unwrap();
         let pv_digest = Sha256::digest(serialized_public_values);
 
-        // write_proof()
         // This is the critical proof verification step
+        // The actual proof is provided via write_proof() in the host
         sp1_lib::verify::verify_sp1_proof(&verification_inputs.agg_vkey, &pv_digest.into());
 
         println!("Successfully verified aggregation proof {}", i + 1);
-        verified_outputs.push(&agg_proof_data.public_values);
+        verified_outputs.push(public_values);
     }
     
     println!("cycle-tracker-end: proof-verification");
@@ -104,6 +95,6 @@ pub fn main() {
     
     println!("Successfully verified {} independent rollup aggregation proofs", 
              verification_output.proofs_verified);
-    println!("Verified rollups: {:?}", verification_output.proofs_outputs.iter().map(|output| output.rollupConfigHash).collect::<Vec<_>>());
+    println!("Verified blocks: {:?}", verification_output.proofs_outputs.iter().map(|output| output.l2BlockNumber).collect::<Vec<_>>());
     println!("Aggregation vkey hash: 0x{}", hex::encode(verification_output.aggr_vkey));
 }

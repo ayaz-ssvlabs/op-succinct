@@ -31,9 +31,9 @@ struct Args {
 /// Load aggregation proof data from files
 fn load_verification_proof_data(
     proof_paths: Vec<String>,
-) -> Result<(Vec<SP1Proof>, Vec<verification::AggregationProofData>)> {
+) -> Result<(Vec<SP1Proof>, Vec<AggregationOutputs>)> {
     let mut proofs = Vec::new();
-    let mut proof_data = Vec::new();
+    let mut public_values_vec = Vec::new();
 
     for proof_path in proof_paths {
         // Load the aggregation proof
@@ -42,9 +42,6 @@ fn load_verification_proof_data(
 
         // Extract SP1Proof for runtime writing
         proofs.push(proof_with_pv.proof.clone());
-
-        // Extract proof bytes for data structure
-        let proof_bytes = proof_with_pv.bytes();
 
         // Extract and decode public values
         const AGG_OUTPUTS_SIZE: usize = 7 * 32;
@@ -56,13 +53,10 @@ fn load_verification_proof_data(
 
         println!("Loaded proof: {} (Block: {})", proof_path, agg_outputs.l2BlockNumber);
 
-        proof_data.push(verification::AggregationProofData {
-            proof: proof_bytes,
-            public_values: agg_outputs,
-        });
+        public_values_vec.push(agg_outputs);
     }
 
-    Ok((proofs, proof_data))
+    Ok((proofs, public_values_vec))
 }
 
 #[tokio::main]
@@ -81,7 +75,7 @@ async fn main() -> Result<()> {
 
     // Load aggregation proof data
     println!("Loading {} aggregation proofs...", args.proofs.len());
-    let (agg_proofs, agg_proof_data) = load_verification_proof_data(args.proofs)?;
+    let (agg_proofs, public_values_vec) = load_verification_proof_data(args.proofs)?;
 
 
 
@@ -105,7 +99,7 @@ async fn main() -> Result<()> {
     }
 
     let verification_inputs = verification::VerificationInputs {
-        agg_proofs: agg_proof_data.clone(),
+        public_values_vec: public_values_vec.clone(),
         agg_vkey: agg_vkey_array,
     };
 
@@ -121,7 +115,7 @@ async fn main() -> Result<()> {
     // Write each aggregation proof to the runtime first
     for proof in &agg_proofs {
         let SP1Proof::Compressed(compressed_proof) = proof else {
-            return Err(anyhow::anyhow!("Invalid proof passed as compressed proof!"));
+            return Err(anyhow::anyhow!("Expected compressed proof, but got different proof type!"));
         };
         stdin.write_proof(*compressed_proof.clone(), agg_vk.vk.clone());
     }
@@ -143,9 +137,9 @@ async fn main() -> Result<()> {
         .expect("Failed to generate proof");
 
     // Save the verification proof
-    let verification_proof_names: Vec<String> = agg_proof_data
+    let verification_proof_names: Vec<String> = public_values_vec
         .iter()
-        .map(|data| format!("block_{}", data.public_values.l2BlockNumber))
+        .map(|data| format!("block_{}", data.l2BlockNumber))
         .collect();
     
     let verification_proof_path = format!(
@@ -186,14 +180,8 @@ mod verification {
     
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct VerificationInputs {
-        pub agg_proofs: Vec<AggregationProofData>,
+        pub public_values_vec: Vec<AggregationOutputs>,
         pub agg_vkey: [u32; 8],
-    }
-
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct AggregationProofData {
-        pub proof: Vec<u8>,
-        pub public_values: AggregationOutputs,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
