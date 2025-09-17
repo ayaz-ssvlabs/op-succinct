@@ -8,8 +8,8 @@ use kona_proof::BootInfo;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-// ABI encoding of AggregationOutputs is 6 * 32 bytes.
-pub const AGGREGATION_OUTPUTS_SIZE: usize = 6 * 32;
+// ABI encoding of AggregationOutputs is 8 * 32 bytes (7 bytes32 + 1 address, all 32-byte padded).
+pub const AGGREGATION_OUTPUTS_SIZE: usize = 8 * 32;
 
 /// Hash the serialized rollup config using SHA256. Note: The rollup config is never unrolled
 /// on-chain, so switching to a different hash function is not a concern, as long as the config hash
@@ -36,6 +36,7 @@ sol! {
         bytes32 l2PostRoot;
         uint64 l2BlockNumber;
         bytes32 rollupConfigHash;
+        bytes32 mailboxRoot;
     }
 }
 
@@ -47,6 +48,8 @@ impl From<BootInfo> for BootInfoStruct {
             l2PostRoot: boot_info.claimed_l2_output_root,
             l2BlockNumber: boot_info.claimed_l2_block_number,
             rollupConfigHash: hash_rollup_config(&boot_info.rollup_config),
+            // Default value
+            mailboxRoot: B256::ZERO,
         }
     }
 }
