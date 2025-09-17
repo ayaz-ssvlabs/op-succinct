@@ -7517,14 +7517,19 @@ dependencies = [
  "sp1-sdk",
  "tokio",
  "tracing",
+ "tracing-subscriber 0.3.19",
 ]
 
 [[package]]
 name = "op-succinct-range-utils"
 version = "3.0.0"
 dependencies = [
+ "alloy-consensus 1.0.9",
+ "alloy-primitives",
  "anyhow",
+ "kona-executor",
  "kona-proof",
+ "kona-protocol",
  "op-succinct-client-utils",
  "rkyv",
  "sp1-zkvm",
