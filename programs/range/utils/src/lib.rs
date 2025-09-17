@@ -1,8 +1,13 @@
 use std::sync::Arc;
 
-use kona_proof::{l1::OracleL1ChainProvider, l2::OracleL2ChainProvider};
+use alloy_primitives::{Address, B256, address};
+use alloy_primitives::keccak256;
+use alloy_primitives::Sealable; // for seal_ref_slow
+
+use kona_proof::{l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, BootInfo};
+use kona_protocol::BatchValidationProvider; // enables block_by_number on the provider
 use op_succinct_client_utils::{
-    boot::BootInfoStruct,
+    boot::{BootInfoStruct, hash_rollup_config},
     witness::{
         executor::{get_inputs_for_pipeline, WitnessExecutor},
         preimage_store::PreimageStore,
@@ -10,6 +15,7 @@ use op_succinct_client_utils::{
     },
     BlobStore,
 };
+use kona_executor::TrieDB;
 
 /// Sets up tracing for the range program
 #[cfg(feature = "tracing-subscriber")]
@@ -35,9 +41,13 @@ where
     ////////////////////////////////////////////////////////////////
     //                          PROLOGUE                          //
     ////////////////////////////////////////////////////////////////
+
+    println!("Starting blocks verification...");
+
     let (oracle, beacon) = witness_data.get_oracle_and_blob_provider().await.unwrap();
 
     let (boot_info, input) = get_inputs_for_pipeline(oracle.clone()).await.unwrap();
+    let mut l2_provider_for_mailbox: Option<OracleL2ChainProvider<PreimageStore>> = None;
     let boot_info = match input {
         Some((cursor, l1_provider, l2_provider)) => {
             let rollup_config = Arc::new(boot_info.rollup_config.clone());
@@ -53,11 +63,164 @@ where
                 )
                 .await
                 .unwrap();
-
+            // Save for mailbox computation (stubbed for now)
+            l2_provider_for_mailbox = Some(l2_provider.clone());
             executor.run(boot_info, pipeline, cursor, l2_provider).await.unwrap()
         }
         None => boot_info,
     };
 
-    sp1_zkvm::io::commit(&BootInfoStruct::from(boot_info));
+    println!("Finished blocks verification. Now computing mailbox root...");
+
+    // Compute mailbox root from L2 provider
+    let mailbox_root = compute_mailbox_root(&boot_info, l2_provider_for_mailbox.as_mut()).await;
+
+    // Commit BootInfoStruct including the mailbox root.
+    let boot_info_struct = BootInfoStruct {
+        l1Head: boot_info.l1_head,
+        l2PreRoot: boot_info.agreed_l2_output_root,
+        l2PostRoot: boot_info.claimed_l2_output_root,
+        l2BlockNumber: boot_info.claimed_l2_block_number,
+        rollupConfigHash: hash_rollup_config(&boot_info.rollup_config),
+        mailboxRoot: mailbox_root,
+    };
+
+    sp1_zkvm::io::commit(&boot_info_struct);
+}
+
+/// Computes the mailbox root for the final L2 state referenced by `boot_info`.
+/// Inputs:
+/// - `boot_info`: Includes the claimed L2 block number
+/// - `l2_provider`: A provider that can retrieve L2 headers
+async fn compute_mailbox_root(
+    _boot_info: &BootInfo,
+    l2_provider: Option<&mut OracleL2ChainProvider<PreimageStore>>,
+) -> B256 {
+    
+    println!("Inside compute mailbox root...");
+
+    // Assert we have a provider
+    let Some(provider) = l2_provider else {
+        println!("No L2 provider available; skipping mailbox state reads");
+        return B256::ZERO;
+    };
+
+    // Hardcoded Mailbox address
+    // TODO: let it be an input or enforce common address across chains
+    let mailbox_addr: Address = address!("F67D90d846731f65313EA43c89d377Cd22602e0d");
+    println!("Computed mailbox address");
+
+    // Use the claimed L2 block number
+    // Fetch block info
+    let claimed_number = _boot_info.claimed_l2_block_number;
+    let block_info = provider.l2_block_info_by_number(claimed_number).await;
+    match block_info {
+        Ok(info) => {
+            println!("Block info is OK! {:?}", info);
+        },
+        Err(e) => {
+            println!("Failed to load L2 block info; skipping mailbox state reads. Error: {:?}", e);
+            return B256::ZERO;
+        }
+    }
+
+    // Get block by number
+    let block = match provider.block_by_number(claimed_number).await {
+        Ok(b) => { 
+            println!("OpBlock Fine");
+            b  
+        },
+        Err(e) => {
+            println!("Failed to load L2 block; skipping mailbox state reads. Error: {:?}", e);
+            return B256::ZERO;
+        }
+    };
+    // Seal block
+    let sealed_header = block.header.seal_slow();
+    println!("Sealed");
+
+    // Construct trie DB
+    let fetcher = provider.clone();
+    let hinter = provider.clone();
+    let mut db = TrieDB::new(sealed_header, fetcher, hinter);
+    println!("Created new trie db");
+
+    // Get mailbox trie account
+    let trie_account = db.get_trie_account(&mailbox_addr,_boot_info.claimed_l2_block_number);
+    match trie_account {
+        Ok(_account) => {
+            match _account {
+                Some(_accountv) => {
+                    println!("account is OK!")
+                },
+                None => {
+                    println!("account is none")
+                }
+            }
+        },
+        Err(_e) => {
+            println!("trie_account error")
+        }
+    }
+    
+    // Get list of (chainID, inbox root, outbox root)
+    let _mailbox_roots = get_mailbox_root();
+
+    compute_mailbox_root_hash(&_mailbox_roots)
+}
+
+
+/// Returns a list of (chainID, inbox root, outbox root).
+/// Merges inbox and outbox roots by chainID, fills missing roots with B256::ZERO, and sorts by chainID.
+pub fn get_mailbox_root() -> Vec<(u64, B256, B256)> {
+    let inbox_roots = get_inbox_roots();
+    let outbox_roots = get_outbox_roots();
+
+    // Collect all unique chain IDs from both lists
+    let mut chain_ids: Vec<u64> = inbox_roots.iter().map(|(id, _)| *id).collect();
+    chain_ids.extend(outbox_roots.iter().map(|(id, _)| *id));
+    chain_ids.sort_unstable();
+    chain_ids.dedup();
+
+    // For each chain ID, find inbox and outbox roots, or use B256::ZERO
+    let mut result = Vec::with_capacity(chain_ids.len());
+    for chain_id in chain_ids {
+        let inbox = inbox_roots.iter().find(|(id, _)| *id == chain_id).map(|(_, root)| *root).unwrap_or(B256::ZERO);
+        let outbox = outbox_roots.iter().find(|(id, _)| *id == chain_id).map(|(_, root)| *root).unwrap_or(B256::ZERO);
+        result.push((chain_id, inbox, outbox));
+    }
+    result
+}
+
+// Returns a list of (chainID, inbox root).
+// TODO
+pub fn get_inbox_roots() -> Vec<(u64, B256)> {
+    Vec::new()
+}
+
+// Returns a list of (chainID, outbox root).
+// TODO
+pub fn get_outbox_roots() -> Vec<(u64, B256)> {
+    Vec::new()
+}
+
+/// Computes the mailbox root hash from a list of (chainID, root1, root2) tuples.
+/// The hash is keccak256("MAILBOX" || N || c1 || inbox_root(c1) || outbox_root(c1) || ... || cN || inbox_root(cN) || outbox_root(cN))
+pub fn compute_mailbox_root_hash(mailbox_roots: &[(u64, B256, B256)]) -> B256 {
+    let mut bytes = Vec::new();
+
+    // Prefix
+    bytes.extend_from_slice(b"MAILBOX");
+
+    // Number of chainIDs (N) as u64, big-endian
+    bytes.extend_from_slice(&(mailbox_roots.len() as u64).to_be_bytes());
+
+    // For each chainID, append chainID (u64, big-endian), inbox root, outbox root
+    for (chain_id, inbox_root, outbox_root) in mailbox_roots {
+        bytes.extend_from_slice(&chain_id.to_be_bytes());
+        bytes.extend_from_slice(inbox_root.as_slice());
+        bytes.extend_from_slice(outbox_root.as_slice());
+    }
+
+    B256::from(keccak256(&bytes))
 }
