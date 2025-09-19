@@ -15,7 +15,7 @@ use op_succinct_client_utils::{
     },
     BlobStore,
 };
-use kona_executor::TrieDB;
+use kona_executor::{TrieDB, TrieDBProvider};
 
 /// Sets up tracing for the range program
 #[cfg(feature = "tracing-subscriber")]
@@ -49,23 +49,25 @@ where
     let (boot_info, input) = get_inputs_for_pipeline(oracle.clone()).await.unwrap();
     let mut l2_provider_for_mailbox: Option<OracleL2ChainProvider<PreimageStore>> = None;
     let boot_info = match input {
-        Some((cursor, l1_provider, l2_provider)) => {
-            let rollup_config = Arc::new(boot_info.rollup_config.clone());
+        Some((_, _, l2_provider)) => {
+        // Some((cursor, l1_provider, l2_provider)) => {
+            // let rollup_config = Arc::new(boot_info.rollup_config.clone());
 
-            let pipeline = executor
-                .create_pipeline(
-                    rollup_config,
-                    cursor.clone(),
-                    oracle,
-                    beacon,
-                    l1_provider,
-                    l2_provider.clone(),
-                )
-                .await
-                .unwrap();
+            // let pipeline = executor
+            //     .create_pipeline(
+            //         rollup_config,
+            //         cursor.clone(),
+            //         oracle,
+            //         beacon,
+            //         l1_provider,
+            //         l2_provider.clone(),
+            //     )
+            //     .await
+            //     .unwrap();
             // Save for mailbox computation (stubbed for now)
             l2_provider_for_mailbox = Some(l2_provider.clone());
-            executor.run(boot_info, pipeline, cursor, l2_provider).await.unwrap()
+            // executor.run(boot_info, pipeline, cursor, l2_provider).await.unwrap()
+            boot_info
         }
         None => boot_info,
     };
@@ -107,34 +109,30 @@ async fn compute_mailbox_root(
 
     // Hardcoded Mailbox address
     // TODO: let it be an input or enforce common address across chains
-    let mailbox_addr: Address = address!("F67D90d846731f65313EA43c89d377Cd22602e0d");
+    let mailbox_addr: Address = address!("0xF67D90d846731f65313EA43c89d377Cd22602e0d");
     println!("Computed mailbox address");
 
-    // Use the claimed L2 block number
-    // Fetch block info
+    // Attempt getting a block
+    // Try min(claimed_number, safe_number) to avoid going past safe head
+    // though ultimately we need to ensure that we can read the claimed_number block
+    // Probably we'll need to advance the l2_provider to it first
     let claimed_number = _boot_info.claimed_l2_block_number;
-    let block_info = provider.l2_block_info_by_number(claimed_number).await;
-    match block_info {
-        Ok(info) => {
-            println!("Block info is OK! {:?}", info);
+    let safe_head = provider.l2_safe_head().await.unwrap();
+    let safe_header = provider.header_by_hash(safe_head).unwrap();
+    let safe_number = safe_header.number;
+    println!("Safe head block number: {}. Claimed number: {}", safe_number, claimed_number);
+    let block = provider.block_by_number(claimed_number.min(safe_number)).await;
+    let block = match block {
+        Ok(b) => {
+            println!("OpBlock Fine at block number: {}", claimed_number.min(safe_number));
+            b
         },
         Err(e) => {
-            println!("Failed to load L2 block info; skipping mailbox state reads. Error: {:?}", e);
-            return B256::ZERO;
-        }
-    }
-
-    // Get block by number
-    let block = match provider.block_by_number(claimed_number).await {
-        Ok(b) => { 
-            println!("OpBlock Fine");
-            b  
-        },
-        Err(e) => {
-            println!("Failed to load L2 block; skipping mailbox state reads. Error: {:?}", e);
+            println!("Failed to load L2 block at number {}; skipping mailbox state reads. Error: {:?}", claimed_number.min(safe_number), e);
             return B256::ZERO;
         }
     };
+
     // Seal block
     let sealed_header = block.header.seal_slow();
     println!("Sealed");
@@ -146,7 +144,7 @@ async fn compute_mailbox_root(
     println!("Created new trie db");
 
     // Get mailbox trie account
-    let trie_account = db.get_trie_account(&mailbox_addr,_boot_info.claimed_l2_block_number);
+    let trie_account = db.get_trie_account(&mailbox_addr, claimed_number.min(safe_number));
     match trie_account {
         Ok(_account) => {
             match _account {
@@ -154,7 +152,7 @@ async fn compute_mailbox_root(
                     println!("account is OK!")
                 },
                 None => {
-                    println!("account is none")
+                    println!("account does not exist in state")
                 }
             }
         },

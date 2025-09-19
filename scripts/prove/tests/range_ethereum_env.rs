@@ -33,8 +33,8 @@ async fn execute_range_with_workspace_env() -> Result<()> {
     let data_fetcher = OPSuccinctDataFetcher::new_with_rollup_config().await?;
 
     // Fixed L2 block range as requested.
-    let l2_start_block: u64 = 216_128;
-    let l2_end_block: u64 = 216_129;
+    let l2_start_block: u64 = 245341;
+    let l2_end_block: u64 = 245342;
 
     let host = initialize_host(Arc::new(data_fetcher.clone()));
     let host_args = host.fetch(l2_start_block, l2_end_block, None, false).await?;
