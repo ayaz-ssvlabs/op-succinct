@@ -33,17 +33,14 @@ pub struct VerificationOutputs {
 }
 
 pub fn main() {
-    // Read the verification inputs
     let verification_inputs = sp1_zkvm::io::read::<VerificationInputs>();
     
     println!("cycle-tracker-start: verification-setup");
     
-    // Validate that we have at least one proof
     assert!(!verification_inputs.public_values_vec.is_empty(), "No aggregation proofs provided");
     
     println!("cycle-tracker-end: verification-setup");
     
-    // Verify each aggregation proof
     println!("cycle-tracker-start: proof-verification");
     
     let mut verified_outputs = Vec::new();
@@ -52,14 +49,11 @@ pub fn main() {
         .zip(verification_inputs.raw_public_values_vec.iter()).enumerate() {
         println!("Verifying aggregation proof {}", i + 1);
         
-        // Use the raw public values exactly as they were committed by the aggregation program
-        // This should match exactly what SP1's commit_slice() produced
         let pv_digest = Sha256::digest(raw_public_values);
         
         println!("Raw committed data length: {}", raw_public_values.len());
         println!("Computed digest: {:?}", hex::encode(pv_digest));
 
-        // This is the critical proof verification step
         sp1_lib::verify::verify_sp1_proof(&verification_inputs.agg_vkey, &pv_digest.into());
 
         println!("Successfully verified aggregation proof {}", i + 1);
@@ -68,24 +62,19 @@ pub fn main() {
     
     println!("cycle-tracker-end: proof-verification");
     
-    // Since proofs are from different L2 rollups, we don't validate continuity
-    // Each proof is independent and from its own rollup
     println!("cycle-tracker-start: independent-validation");
     
     println!("Verified {} independent rollup proofs", verified_outputs.len());
     
     println!("cycle-tracker-end: independent-validation");
     
-    // Create final verification output
     println!("cycle-tracker-start: output-creation");
     
-    // Convert agg_vkey to B256 for output
     let agg_vkey_bytes = verification_inputs.agg_vkey.iter()
         .flat_map(|&x| x.to_be_bytes())
         .collect::<Vec<u8>>();
     let aggr_vkey = B256::from_slice(&Sha256::digest(&agg_vkey_bytes));
     
-    // Collect all verified proof outputs
     let proofs_outputs = verified_outputs.iter().map(|&output| output.clone()).collect();
     
     let verification_output = VerificationOutputs {
@@ -96,10 +85,9 @@ pub fn main() {
     
     println!("cycle-tracker-end: output-creation");
     
-    // Commit the verification output
     sp1_zkvm::io::commit(&verification_output);
     
-    println!("Successfully verified {} independent rollup aggregation proofs", 
+    println!("Successfully verified {} independent rollup aggregation proofs",
              verification_output.proofs_verified);
     println!("Verified blocks: {:?}", verification_output.proofs_outputs.iter().map(|output| output.l2BlockNumber).collect::<Vec<_>>());
     println!("Aggregation vkey hash: 0x{}", hex::encode(verification_output.aggr_vkey));

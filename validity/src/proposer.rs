@@ -314,151 +314,151 @@ where
         // In CUDA mode, proofs are generated synchronously in make_proof_request
         // so this method is effectively a no-op
         debug!("CUDA mode: Skipping async proof status check for request {}", request.id);
-        Ok(())
+        // Ok(())
         
-        /* OLD NETWORK CODE - COMMENTED OUT FOR CUDA-ONLY MODE
-        if let Some(proof_request_id) = request.proof_request_id.as_ref() {
-            let cuda_prover = &self.driver_config.cuda_prover;
-            // CUDA provers don't have async status checking
-
-            // Check if current time exceeds deadline. If so, the proof has timed out.
-            let current_time = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            if current_time > status.deadline {
-                match self
-                    .proof_requester
-                    .handle_failed_request(request.clone(), status.execution_status())
-                    .await
-                {
-                    Ok(_) => ValidityGauge::ProofRequestRetryCount.increment(1.0),
-                    Err(e) => {
-                        ValidityGauge::RetryErrorCount.increment(1.0);
-                        return Err(e);
-                    }
-                }
-
-                ValidityGauge::ProofRequestTimeoutErrorCount.increment(1.0);
-
-                // Log timeout of range proof
-                match request.req_type {
-                    RequestType::Range => {
-                        warn!(
-                            proof_id = request.id,
-                            start_block = request.start_block,
-                            end_block = request.end_block,
-                            deadline = status.deadline,
-                            current_time = current_time,
-                            "Range proof request timed out"
-                        );
-                    }
-                    RequestType::Aggregation => {
-                        warn!(
-                            proof_id = request.id,
-                            start_block = request.start_block,
-                            end_block = request.end_block,
-                            deadline = status.deadline,
-                            current_time = current_time,
-                            "Aggregation proof request timed out"
-                        );
-                    }
-                }
-
-                return Ok(());
-            }
-
-            // If the proof request has been fulfilled, update the request to status Complete and
-            // add the proof bytes to the database.
-            if status.fulfillment_status() == FulfillmentStatus::Fulfilled {
-                let proof: SP1ProofWithPublicValues = proof.unwrap();
-
-                let proof_bytes = match proof.proof {
-                    // If it's a compressed proof, serialize with bincode.
-                    SP1Proof::Compressed(_) => bincode::serialize(&proof).unwrap(),
-                    // If it's Groth16 or PLONK, get the on-chain proof bytes.
-                    SP1Proof::Groth16(_) | SP1Proof::Plonk(_) => proof.bytes(),
-                    SP1Proof::Core(_) => return Err(anyhow!("Core proofs are not supported.")),
-                };
-
-                // Add the completed proof to the database.
-                self.driver_config
-                    .driver_db_client
-                    .update_proof_to_complete(request.id, &proof_bytes)
-                    .await?;
-                // Update the prove_duration based on the current time and the proof_request_time.
-                self.driver_config.driver_db_client.update_prove_duration(request.id).await?;
-
-                // Log completion of range and aggregation proofs.
-                match request.req_type {
-                    RequestType::Range => {
-                        info!(
-                            proof_id = request.id,
-                            start_block = request.start_block,
-                            end_block = request.end_block,
-                            proof_request_time = ?request.proof_request_time,
-                            total_tx_fees = %request.total_tx_fees,
-                            total_transactions = request.total_nb_transactions,
-                            witnessgen_duration_s = request.witnessgen_duration,
-                            prove_duration_s = request.prove_duration,
-                            total_eth_gas_used = request.total_eth_gas_used,
-                            total_l1_fees = %request.total_l1_fees,
-                            "Range proof completed successfully"
-                        );
-                    }
-                    RequestType::Aggregation => {
-                        info!(
-                            proof_id = request.id,
-                            start_block = request.start_block,
-                            end_block = request.end_block,
-                            witnessgen_duration_s = request.witnessgen_duration,
-                            prove_duration_s = request.prove_duration,
-                            "Aggregation proof completed successfully"
-                        );
-                    }
-                }
-            } else if status.fulfillment_status() == FulfillmentStatus::Unfulfillable {
-                // Log failure of range and aggregation proofs.
-                match request.req_type {
-                    RequestType::Range => {
-                        warn!(
-                            proof_id = request.id,
-                            start_block = request.start_block,
-                            end_block = request.end_block,
-                            proof_request_time = ?request.proof_request_time,
-                            total_tx_fees = %request.total_tx_fees,
-                            total_transactions = request.total_nb_transactions,
-                            witnessgen_duration_s = request.witnessgen_duration,
-                            total_eth_gas_used = request.total_eth_gas_used,
-                            total_l1_fees = %request.total_l1_fees,
-                            execution_status = ?status.execution_status(),
-                            "Range proof request failed - unfulfillable"
-                        );
-                    }
-                    RequestType::Aggregation => {
-                        warn!(
-                            proof_id = request.id,
-                            start_block = request.start_block,
-                            end_block = request.end_block,
-                            witnessgen_duration_s = request.witnessgen_duration,
-                            execution_status = ?status.execution_status(),
-                            "Aggregation proof request failed - unfulfillable"
-                        );
-                    }
-                }
-
-                self.proof_requester
-                    .handle_failed_request(request, status.execution_status())
-                    .await?;
-                ValidityGauge::ProofRequestRetryCount.increment(1.0);
-            }
-        } else {
+         // OLD NETWORK CODE - COMMENTED OUT FOR CUDA-ONLY MODE
+        // if let Some(proof_request_id) = request.proof_request_id.as_ref() {
+        //     let cuda_prover = &self.driver_config.cuda_prover;
+        //     // CUDA provers don't have async status checking
+        //
+        //     // Check if current time exceeds deadline. If so, the proof has timed out.
+        //     let current_time = std::time::SystemTime::now()
+        //         .duration_since(std::time::UNIX_EPOCH)
+        //         .unwrap()
+        //         .as_secs();
+        //     if current_time > status.deadline {
+        //         match self
+        //             .proof_requester
+        //             .handle_failed_request(request.clone(), status.execution_status())
+        //             .await
+        //         {
+        //             Ok(_) => ValidityGauge::ProofRequestRetryCount.increment(1.0),
+        //             Err(e) => {
+        //                 ValidityGauge::RetryErrorCount.increment(1.0);
+        //                 return Err(e);
+        //             }
+        //         }
+        //
+        //         ValidityGauge::ProofRequestTimeoutErrorCount.increment(1.0);
+        //
+        //         // Log timeout of range proof
+        //         match request.req_type {
+        //             RequestType::Range => {
+        //                 warn!(
+        //                     proof_id = request.id,
+        //                     start_block = request.start_block,
+        //                     end_block = request.end_block,
+        //                     deadline = status.deadline,
+        //                     current_time = current_time,
+        //                     "Range proof request timed out"
+        //                 );
+        //             }
+        //             RequestType::Aggregation => {
+        //                 warn!(
+        //                     proof_id = request.id,
+        //                     start_block = request.start_block,
+        //                     end_block = request.end_block,
+        //                     deadline = status.deadline,
+        //                     current_time = current_time,
+        //                     "Aggregation proof request timed out"
+        //                 );
+        //             }
+        //         }
+        //
+        //         return Ok(());
+        //     }
+        //
+        //     // If the proof request has been fulfilled, update the request to status Complete and
+        //     // add the proof bytes to the database.
+        //     if status.fulfillment_status() == FulfillmentStatus::Fulfilled {
+        //         let proof: SP1ProofWithPublicValues = proof.unwrap();
+        //
+        //         let proof_bytes = match proof.proof {
+        //             // If it's a compressed proof, serialize with bincode.
+        //             SP1Proof::Compressed(_) => bincode::serialize(&proof).unwrap(),
+        //             // If it's Groth16 or PLONK, get the on-chain proof bytes.
+        //             SP1Proof::Groth16(_) | SP1Proof::Plonk(_) => proof.bytes(),
+        //             SP1Proof::Core(_) => return Err(anyhow!("Core proofs are not supported.")),
+        //         };
+        //
+        //         // Add the completed proof to the database.
+        //         self.driver_config
+        //             .driver_db_client
+        //             .update_proof_to_complete(request.id, &proof_bytes)
+        //             .await?;
+        //         // Update the prove_duration based on the current time and the proof_request_time.
+        //         self.driver_config.driver_db_client.update_prove_duration(request.id).await?;
+        //
+        //         // Log completion of range and aggregation proofs.
+        //         match request.req_type {
+        //             RequestType::Range => {
+        //                 info!(
+        //                     proof_id = request.id,
+        //                     start_block = request.start_block,
+        //                     end_block = request.end_block,
+        //                     proof_request_time = ?request.proof_request_time,
+        //                     total_tx_fees = %request.total_tx_fees,
+        //                     total_transactions = request.total_nb_transactions,
+        //                     witnessgen_duration_s = request.witnessgen_duration,
+        //                     prove_duration_s = request.prove_duration,
+        //                     total_eth_gas_used = request.total_eth_gas_used,
+        //                     total_l1_fees = %request.total_l1_fees,
+        //                     "Range proof completed successfully"
+        //                 );
+        //             }
+        //             RequestType::Aggregation => {
+        //                 info!(
+        //                     proof_id = request.id,
+        //                     start_block = request.start_block,
+        //                     end_block = request.end_block,
+        //                     witnessgen_duration_s = request.witnessgen_duration,
+        //                     prove_duration_s = request.prove_duration,
+        //                     "Aggregation proof completed successfully"
+        //                 );
+        //             }
+        //         }
+        //     } else if status.fulfillment_status() == FulfillmentStatus::Unfulfillable {
+        //         // Log failure of range and aggregation proofs.
+        //         match request.req_type {
+        //             RequestType::Range => {
+        //                 warn!(
+        //                     proof_id = request.id,
+        //                     start_block = request.start_block,
+        //                     end_block = request.end_block,
+        //                     proof_request_time = ?request.proof_request_time,
+        //                     total_tx_fees = %request.total_tx_fees,
+        //                     total_transactions = request.total_nb_transactions,
+        //                     witnessgen_duration_s = request.witnessgen_duration,
+        //                     total_eth_gas_used = request.total_eth_gas_used,
+        //                     total_l1_fees = %request.total_l1_fees,
+        //                     execution_status = ?status.execution_status(),
+        //                     "Range proof request failed - unfulfillable"
+        //                 );
+        //             }
+        //             RequestType::Aggregation => {
+        //                 warn!(
+        //                     proof_id = request.id,
+        //                     start_block = request.start_block,
+        //                     end_block = request.end_block,
+        //                     witnessgen_duration_s = request.witnessgen_duration,
+        //                     execution_status = ?status.execution_status(),
+        //                     "Aggregation proof request failed - unfulfillable"
+        //                 );
+        //             }
+        //         }
+        //
+        //         self.proof_requester
+        //             .handle_failed_request(request, status.execution_status())
+        //             .await?;
+        //         ValidityGauge::ProofRequestRetryCount.increment(1.0);
+        //     }
+        // } else {
             // There should never be a proof request in Prove status without a proof request id.
-            tracing::warn!(id = request.id, start_block = request.start_block, end_block = request.end_block, req_type = ?request.req_type, "Request has no proof request id");
-        }
+            // tracing::warn!(id = request.id, start_block = request.start_block, end_block = request.end_block, req_type = ?request.req_type, "Request has no proof request id");
+        // }
 
         Ok(())
-        */
+
     }
 
     /// Create aggregation proofs based on the completed range proofs. The range proofs must be
