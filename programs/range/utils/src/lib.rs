@@ -1,13 +1,12 @@
-use std::sync::Arc;
+use std::sync::Once;
 
-use alloy_primitives::{Address, B256, address};
-use alloy_primitives::keccak256;
-use alloy_primitives::Sealable; // for seal_ref_slow
+use alloy_primitives::{address, keccak256, Address, Sealable, B256}; // for seal_ref_slow
 
+use kona_executor::{TrieDB, TrieDBProvider};
 use kona_proof::{l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, BootInfo};
 use kona_protocol::BatchValidationProvider; // enables block_by_number on the provider
 use op_succinct_client_utils::{
-    boot::{BootInfoStruct, hash_rollup_config},
+    boot::{hash_rollup_config, BootInfoStruct},
     witness::{
         executor::{get_inputs_for_pipeline, WitnessExecutor},
         preimage_store::PreimageStore,
@@ -15,16 +14,58 @@ use op_succinct_client_utils::{
     },
     BlobStore,
 };
-use kona_executor::{TrieDB, TrieDBProvider};
+use tracing::{debug, error, info, warn};
+
+macro_rules! log_info {
+    ($($arg:tt)*) => {{
+        info!($($arg)*);
+        #[cfg(target_os = "zkvm")]
+        println!($($arg)*);
+    }};
+}
+
+macro_rules! log_debug {
+    ($($arg:tt)*) => {{
+        debug!($($arg)*);
+        #[cfg(target_os = "zkvm")]
+        println!($($arg)*);
+    }};
+}
+
+macro_rules! log_warn {
+    ($($arg:tt)*) => {{
+        warn!($($arg)*);
+        #[cfg(target_os = "zkvm")]
+        println!($($arg)*);
+    }};
+}
+
+macro_rules! log_error {
+    ($($arg:tt)*) => {{
+        error!($($arg)*);
+        #[cfg(target_os = "zkvm")]
+        println!($($arg)*);
+    }};
+}
 
 /// Sets up tracing for the range program
-#[cfg(feature = "tracing-subscriber")]
 pub fn setup_tracing() {
-    use anyhow::anyhow;
-    use tracing::Level;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        #[cfg(feature = "tracing-subscriber")]
+        {
+            use anyhow::anyhow;
+            use tracing::Level;
 
-    let subscriber = tracing_subscriber::fmt().with_max_level(Level::INFO).finish();
-    tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e)).unwrap();
+            let subscriber = tracing_subscriber::fmt().with_max_level(Level::INFO).finish();
+            tracing::subscriber::set_global_default(subscriber).map_err(|e| anyhow!(e)).unwrap();
+        }
+
+        #[cfg(not(feature = "tracing-subscriber"))]
+        {
+            // no op
+        }
+    });
 }
 
 pub async fn run_range_program<E, W>(executor: E, witness_data: W)
@@ -42,7 +83,7 @@ where
     //                          PROLOGUE                          //
     ////////////////////////////////////////////////////////////////
 
-    println!("Starting blocks verification...");
+    log_info!("Starting blocks verification...");
 
     let (oracle, beacon) = witness_data.get_oracle_and_blob_provider().await.unwrap();
 
@@ -50,7 +91,7 @@ where
     let mut l2_provider_for_mailbox: Option<OracleL2ChainProvider<PreimageStore>> = None;
     let boot_info = match input {
         Some((_, _, l2_provider)) => {
-        // Some((cursor, l1_provider, l2_provider)) => {
+            // Some((cursor, l1_provider, l2_provider)) => {
             // let rollup_config = Arc::new(boot_info.rollup_config.clone());
 
             // let pipeline = executor
@@ -72,7 +113,7 @@ where
         None => boot_info,
     };
 
-    println!("Finished blocks verification. Now computing mailbox root...");
+    log_info!("Finished blocks verification. Now computing mailbox root...");
 
     // Compute mailbox root from L2 provider
     let mailbox_root = compute_mailbox_root(&boot_info, l2_provider_for_mailbox.as_mut()).await;
@@ -98,19 +139,18 @@ async fn compute_mailbox_root(
     _boot_info: &BootInfo,
     l2_provider: Option<&mut OracleL2ChainProvider<PreimageStore>>,
 ) -> B256 {
-    
-    println!("Inside compute mailbox root...");
+    log_info!("Inside compute mailbox root...");
 
     // Assert we have a provider
     let Some(provider) = l2_provider else {
-        println!("No L2 provider available; skipping mailbox state reads");
+        log_warn!("No L2 provider available; skipping mailbox state reads");
         return B256::ZERO;
     };
 
     // Hardcoded Mailbox address
     // TODO: let it be an input or enforce common address across chains
     let mailbox_addr: Address = address!("0xF67D90d846731f65313EA43c89d377Cd22602e0d");
-    println!("Computed mailbox address");
+    log_debug!("Computed mailbox address");
 
     // Attempt getting a block
     // Try min(claimed_number, safe_number) to avoid going past safe head
@@ -120,56 +160,58 @@ async fn compute_mailbox_root(
     let safe_head = provider.l2_safe_head().await.unwrap();
     let safe_header = provider.header_by_hash(safe_head).unwrap();
     let safe_number = safe_header.number;
-    println!("Safe head block number: {}. Claimed number: {}", safe_number, claimed_number);
+    log_info!("Safe head block number: {safe_number}. Claimed number: {claimed_number}");
     let block = provider.block_by_number(claimed_number.min(safe_number)).await;
     let block = match block {
         Ok(b) => {
-            println!("OpBlock Fine at block number: {}", claimed_number.min(safe_number));
+            log_info!("Mailbox block loaded: {}", claimed_number.min(safe_number));
             b
-        },
+        }
         Err(e) => {
-            println!("Failed to load L2 block at number {}; skipping mailbox state reads. Error: {:?}", claimed_number.min(safe_number), e);
+            log_error!(
+                "Failed to load L2 block at number {}; skipping mailbox state reads. Error: {:?}",
+                claimed_number.min(safe_number),
+                e
+            );
             return B256::ZERO;
         }
     };
 
     // Seal block
     let sealed_header = block.header.seal_slow();
-    println!("Sealed");
+    log_debug!("Sealed header for mailbox computation");
 
     // Construct trie DB
     let fetcher = provider.clone();
     let hinter = provider.clone();
     let mut db = TrieDB::new(sealed_header, fetcher, hinter);
-    println!("Created new trie db");
+    log_debug!("Created trie DB for mailbox reads");
 
     // Get mailbox trie account
     let trie_account = db.get_trie_account(&mailbox_addr, claimed_number.min(safe_number));
     match trie_account {
-        Ok(_account) => {
-            match _account {
-                Some(_accountv) => {
-                    println!("account is OK!")
-                },
-                None => {
-                    println!("account does not exist in state")
-                }
+        Ok(_account) => match _account {
+            Some(_accountv) => {
+                log_debug!("Mailbox account exists in state");
+            }
+            None => {
+                log_warn!("Mailbox account not present in state");
             }
         },
         Err(_e) => {
-            println!("trie_account error")
+            log_error!("Mailbox trie account error");
         }
     }
-    
+
     // Get list of (chainID, inbox root, outbox root)
     let _mailbox_roots = get_mailbox_root();
 
     compute_mailbox_root_hash(&_mailbox_roots)
 }
 
-
 /// Returns a list of (chainID, inbox root, outbox root).
-/// Merges inbox and outbox roots by chainID, fills missing roots with B256::ZERO, and sorts by chainID.
+/// Merges inbox and outbox roots by chainID, fills missing roots with B256::ZERO, and sorts by
+/// chainID.
 pub fn get_mailbox_root() -> Vec<(u64, B256, B256)> {
     let inbox_roots = get_inbox_roots();
     let outbox_roots = get_outbox_roots();
@@ -183,8 +225,16 @@ pub fn get_mailbox_root() -> Vec<(u64, B256, B256)> {
     // For each chain ID, find inbox and outbox roots, or use B256::ZERO
     let mut result = Vec::with_capacity(chain_ids.len());
     for chain_id in chain_ids {
-        let inbox = inbox_roots.iter().find(|(id, _)| *id == chain_id).map(|(_, root)| *root).unwrap_or(B256::ZERO);
-        let outbox = outbox_roots.iter().find(|(id, _)| *id == chain_id).map(|(_, root)| *root).unwrap_or(B256::ZERO);
+        let inbox = inbox_roots
+            .iter()
+            .find(|(id, _)| *id == chain_id)
+            .map(|(_, root)| *root)
+            .unwrap_or(B256::ZERO);
+        let outbox = outbox_roots
+            .iter()
+            .find(|(id, _)| *id == chain_id)
+            .map(|(_, root)| *root)
+            .unwrap_or(B256::ZERO);
         result.push((chain_id, inbox, outbox));
     }
     result
@@ -203,7 +253,8 @@ pub fn get_outbox_roots() -> Vec<(u64, B256)> {
 }
 
 /// Computes the mailbox root hash from a list of (chainID, root1, root2) tuples.
-/// The hash is keccak256("MAILBOX" || N || c1 || inbox_root(c1) || outbox_root(c1) || ... || cN || inbox_root(cN) || outbox_root(cN))
+/// The hash is keccak256("MAILBOX" || N || c1 || inbox_root(c1) || outbox_root(c1) || ... || cN ||
+/// inbox_root(cN) || outbox_root(cN))
 pub fn compute_mailbox_root_hash(mailbox_roots: &[(u64, B256, B256)]) -> B256 {
     let mut bytes = Vec::new();
 

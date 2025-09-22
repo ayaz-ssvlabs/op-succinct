@@ -11,13 +11,10 @@ sp1_zkvm::entrypoint!(main);
 
 use op_succinct_client_utils::witness::DefaultWitnessData;
 use op_succinct_ethereum_client_utils::executor::ETHDAWitnessExecutor;
-use op_succinct_range_utils::run_range_program;
-#[cfg(feature = "tracing-subscriber")]
-use op_succinct_range_utils::setup_tracing;
+use op_succinct_range_utils::{run_range_program, setup_tracing};
 use rkyv::rancor::Error;
 
 fn main() {
-    #[cfg(feature = "tracing-subscriber")]
     setup_tracing();
 
     kona_proof::block_on(async move {

@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
+use op_succinct_elfs::RANGE_ELF_EMBEDDED;
 use op_succinct_host_utils::fetcher::OPSuccinctDataFetcher;
- use op_succinct_elfs::RANGE_ELF_EMBEDDED;
+
+pub mod logging;
+
+pub use logging::GuestLogBridge;
 
 /// Get the range ELF depending on the feature flag.
 pub fn get_range_elf_embedded() -> &'static [u8] {

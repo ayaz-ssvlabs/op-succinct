@@ -13,9 +13,9 @@ use op_succinct_proof_utils::initialize_host;
 use op_succinct_prove::execute_multi;
 
 /// Integration-style test that executes the Ethereum range zk program using RPC endpoints
-/// specified in the workspace `env.env` file.
+/// specified in the workspace `.env` file.
 ///
-/// This test mirrors `multi.rs` but explicitly loads `env.env` from the workspace root to make
+/// This test mirrors `multi.rs` but explicitly loads `.env` from the workspace root to make
 /// it easy to test with the provided RPC endpoints.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn execute_range_with_workspace_env() -> Result<()> {
@@ -27,7 +27,7 @@ async fn execute_range_with_workspace_env() -> Result<()> {
 
     // Locate the workspace root and load `env.env` from there.
     let metadata = MetadataCommand::new().exec().unwrap();
-    let env_path = metadata.workspace_root.join("env.env");
+    let env_path = metadata.workspace_root.join(".env");
     dotenv::from_path(&env_path)?;
 
     let data_fetcher = OPSuccinctDataFetcher::new_with_rollup_config().await?;
