@@ -1,5 +1,5 @@
 use alloy_consensus::BlockBody;
-use alloy_primitives::B256;
+use alloy_primitives::{address, Address, B256};
 use alloy_rlp::Decodable;
 use anyhow::Result;
 use kona_derive::{
@@ -10,11 +10,16 @@ use kona_derive::{
 use kona_driver::{Driver, DriverError, DriverPipeline, DriverResult, Executor, TipCursor};
 use kona_genesis::RollupConfig;
 use kona_preimage::{CommsClient, PreimageKey};
-use kona_proof::{errors::OracleProviderError, HintType};
+use kona_proof::{errors::OracleProviderError, FlushableCache, HintType};
 use kona_protocol::L2BlockInfo;
 use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
 use std::fmt::Debug;
+use kona_executor::{TrieDB, TrieDBProvider};
+use kona_proof::l2::OracleL2ChainProvider;
+use revm::primitives::StorageKey;
 use tracing::{error, info, warn};
+use revm::context::JournalTr;
+use revm::{Context, Journal, JournalEntry};
 
 /// Fetches the safe head hash of the L2 chain based on the agreed upon L2 output root in the
 /// [BootInfo].
@@ -52,15 +57,17 @@ where
 /// - `Ok((l2_safe_head, output_root))` - A tuple containing the [L2BlockInfo] of the produced block
 ///   and the output root.
 /// - `Err(e)` - An error if the block could not be produced.
-pub async fn advance_to_target<E, DP, P>(
+pub async fn advance_to_target<E, O, DP, P>(
     driver: &mut Driver<E, DP, P>,
     cfg: &RollupConfig,
     mut target: Option<u64>,
+    provider: &mut OracleL2ChainProvider<O>,
 ) -> DriverResult<(L2BlockInfo, B256), E::Error>
 where
     E: Executor + Send + Sync + Debug,
     DP: DriverPipeline<P> + Send + Sync + Debug,
     P: Pipeline + SignalReceiver + Send + Sync + Debug,
+    O: CommsClient + FlushableCache + Send + Sync + Debug,
 {
     loop {
         // Check if we have reached the target block number.
@@ -69,6 +76,35 @@ where
         if let Some(tb) = target {
             if tip_cursor.l2_safe_head.block_info.number >= tb {
                 info!(target: "client", "Derivation complete, reached L2 safe head.");
+
+                let safe_block_number = tip_cursor.l2_safe_head.block_info.number;
+                println!("Safe head block number: {}.", safe_block_number);
+
+                // Get Header
+                let sealed_header = tip_cursor.l2_safe_head_header.clone();
+
+                // Create new TrieDB
+                let trie_db = TrieDB::new(sealed_header, provider.clone(), provider.clone());
+
+                // Create journal
+                let mut journal: Journal<TrieDB<OracleL2ChainProvider<O>,OracleL2ChainProvider<O>>,JournalEntry> = Journal::new(trie_db);
+
+                // Use driver to fetch state of latest block in order to read mailbox contract state
+                let mailbox_addr: Address = address!("0xF67D90d846731f65313EA43c89d377Cd22602e0d");
+                let storage_key = StorageKey::from(0x0_u64);
+
+                let storage_state = journal.sload(mailbox_addr, storage_key);
+
+                match storage_state {
+                    Ok(value) => {
+                        println!("Mailbox contract storage at key 0x0: {}", value.data);
+                    },
+                    Err(e) => {
+                        println!("Failed to read mailbox contract storage. Error: {:?}", e);
+                    }
+                }
+
+
                 return Ok((tip_cursor.l2_safe_head, tip_cursor.l2_safe_head_output_root));
             }
         }

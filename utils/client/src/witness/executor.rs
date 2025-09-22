@@ -128,7 +128,7 @@ pub trait WitnessExecutor {
         let executor = KonaExecutor::new(
             rollup_config.as_ref(),
             l2_provider.clone(),
-            l2_provider,
+            l2_provider.clone(),
             ZkvmOpEvmFactory::new(),
             None,
         );
@@ -143,6 +143,7 @@ pub trait WitnessExecutor {
             &mut driver,
             rollup_config.as_ref(),
             Some(boot.claimed_l2_block_number),
+            &mut l2_provider.clone(),
         )
         .await?;
         #[cfg(target_os = "zkvm")]

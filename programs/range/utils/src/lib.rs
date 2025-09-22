@@ -1,4 +1,4 @@
-use std::sync::Once;
+use std::sync::{Arc, Once};
 
 use alloy_primitives::{address, keccak256, Address, Sealable, B256}; // for seal_ref_slow
 
@@ -90,25 +90,25 @@ where
     let (boot_info, input) = get_inputs_for_pipeline(oracle.clone()).await.unwrap();
     let mut l2_provider_for_mailbox: Option<OracleL2ChainProvider<PreimageStore>> = None;
     let boot_info = match input {
-        Some((_, _, l2_provider)) => {
-            // Some((cursor, l1_provider, l2_provider)) => {
-            // let rollup_config = Arc::new(boot_info.rollup_config.clone());
+        // Some((_, _, l2_provider)) => {
+        Some((cursor, l1_provider, l2_provider)) => {
+        let rollup_config = Arc::new(boot_info.rollup_config.clone());
 
-            // let pipeline = executor
-            //     .create_pipeline(
-            //         rollup_config,
-            //         cursor.clone(),
-            //         oracle,
-            //         beacon,
-            //         l1_provider,
-            //         l2_provider.clone(),
-            //     )
-            //     .await
-            //     .unwrap();
-            // Save for mailbox computation (stubbed for now)
-            l2_provider_for_mailbox = Some(l2_provider.clone());
-            // executor.run(boot_info, pipeline, cursor, l2_provider).await.unwrap()
-            boot_info
+        let pipeline = executor
+            .create_pipeline(
+                rollup_config,
+                cursor.clone(),
+                oracle,
+                beacon,
+                l1_provider,
+                l2_provider.clone(),
+            )
+            .await
+            .unwrap();
+        // Save for mailbox computation (stubbed for now)
+        l2_provider_for_mailbox = Some(l2_provider.clone());
+        executor.run(boot_info, pipeline, cursor, l2_provider).await.unwrap()
+        // boot_info
         }
         None => boot_info,
     };
@@ -116,7 +116,8 @@ where
     log_info!("Finished blocks verification. Now computing mailbox root...");
 
     // Compute mailbox root from L2 provider
-    let mailbox_root = compute_mailbox_root(&boot_info, l2_provider_for_mailbox.as_mut()).await;
+    // let mailbox_root = compute_mailbox_root(&boot_info, l2_provider_for_mailbox.as_mut()).await;
+    let mailbox_root = B256::ZERO;
 
     // Commit BootInfoStruct including the mailbox root.
     let boot_info_struct = BootInfoStruct {
