@@ -37,6 +37,7 @@ rkyv.workspace = true
 sha2.workspace = true
 tracing.workspace = true
 spin.workspace = true
+reqwest = { version = "0.11", features = ["json"] }
 
 # kzg
 kzg-rs.workspace = true

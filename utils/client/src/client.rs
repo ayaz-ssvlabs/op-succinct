@@ -80,30 +80,58 @@ where
                 let safe_block_number = tip_cursor.l2_safe_head.block_info.number;
                 println!("Safe head block number: {}.", safe_block_number);
 
-                // Get Header
-                let sealed_header = tip_cursor.l2_safe_head_header.clone();
-
-                // Create new TrieDB
-                let trie_db = TrieDB::new(sealed_header, provider.clone(), provider.clone());
-
-                // Create journal
-                let mut journal: Journal<TrieDB<OracleL2ChainProvider<O>,OracleL2ChainProvider<O>>,JournalEntry> = Journal::new(trie_db);
-
                 // Use driver to fetch state of latest block in order to read mailbox contract state
                 let mailbox_addr: Address = address!("0xF67D90d846731f65313EA43c89d377Cd22602e0d");
                 let storage_key = StorageKey::from(0x0_u64);
 
-                let storage_state = journal.sload(mailbox_addr, storage_key);
+                // Prepare JSON-RPC request for eth_getStorageAt
+                use serde_json::json;
 
-                match storage_state {
-                    Ok(value) => {
-                        println!("Mailbox contract storage at key 0x0: {}", value.data);
-                    },
+                // Convert mailbox_addr and storage_key to hex strings
+                let mailbox_addr_hex = format!("{:#x}", mailbox_addr);
+                let storage_key_hex = format!("{:#x}", storage_key);
+
+                // Use the safe block number as the block tag in hex (e.g., "0x3BE5F")
+                let block_tag_hex = format!("0x{:X}", safe_block_number);
+
+                let request_body = json!({
+                    "jsonrpc": "2.0",
+                    "method": "eth_getStorageAt",
+                    "params": [
+                        mailbox_addr_hex,
+                        storage_key_hex,
+                        block_tag_hex
+                    ],
+                    "id": 1
+                });
+
+                // L2_RPC endpoint (replace with your actual endpoint if needed)
+                let l2_rpc = std::env::var("L2_RPC").unwrap_or_else(|_| "http://57.129.73.156:31130".to_string());
+
+                // Send the request using reqwest
+                let client = reqwest::Client::new();
+                let response = client
+                    .post(&l2_rpc)
+                    .header("Content-Type", "application/json")
+                    .json(&request_body)
+                    .send()
+                    .await;
+
+                match response {
+                    Ok(resp) => {
+                        match resp.json::<serde_json::Value>().await {
+                            Ok(json_resp) => {
+                                println!("Mailbox contract storage at key 0x0: {:?}", json_resp);
+                            }
+                            Err(e) => {
+                                println!("Failed to parse JSON response: {:?}", e);
+                            }
+                        }
+                    }
                     Err(e) => {
-                        println!("Failed to read mailbox contract storage. Error: {:?}", e);
+                        println!("Failed to send JSON-RPC request: {:?}", e);
                     }
                 }
-
 
                 return Ok((tip_cursor.l2_safe_head, tip_cursor.l2_safe_head_output_root));
             }

@@ -203,13 +203,13 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
         let network_prover = self.network_prover.clone();
         // Move the CPU-intensive operation to a dedicated thread.
         let (pv, report) = match tokio::task::spawn_blocking(move || {
-            let mut stdout_bridge = GuestLogBridge::new(Level::INFO, "sp1::stdout");
-            let mut stderr_bridge = GuestLogBridge::new(Level::WARN, "sp1::stderr");
+            // let mut stdout_bridge = GuestLogBridge::new(Level::INFO, "sp1::stdout");
+            // let mut stderr_bridge = GuestLogBridge::new(Level::WARN, "sp1::stderr");
             network_prover
                 .execute(get_range_elf_embedded(), &stdin)
                 .calculate_gas(true)
-                .stdout(&mut stdout_bridge)
-                .stderr(&mut stderr_bridge)
+                // .stdout(&mut stdout_bridge)
+                // .stderr(&mut stderr_bridge)
                 .run()
         })
         .await?
@@ -261,14 +261,14 @@ impl<H: OPSuccinctHost> OPSuccinctProofRequester<H> {
         let network_prover = self.network_prover.clone();
         // Move the CPU-intensive operation to a dedicated thread.
         let (pv, report) = match tokio::task::spawn_blocking(move || {
-            let mut stdout_bridge = GuestLogBridge::new(Level::INFO, "sp1::stdout");
-            let mut stderr_bridge = GuestLogBridge::new(Level::WARN, "sp1::stderr");
+            // let mut stdout_bridge = GuestLogBridge::new(Level::INFO, "sp1::stdout");
+            // let mut stderr_bridge = GuestLogBridge::new(Level::WARN, "sp1::stderr");
             network_prover
                 .execute(AGGREGATION_ELF, &stdin)
                 .calculate_gas(true)
                 .deferred_proof_verification(false)
-                .stdout(&mut stdout_bridge)
-                .stderr(&mut stderr_bridge)
+                // .stdout(&mut stdout_bridge)
+                // .stderr(&mut stderr_bridge)
                 .run()
         })
         .await?

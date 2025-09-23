@@ -95,13 +95,13 @@ async fn main() -> Result<()> {
     if args.prove {
         prover.prove(&agg_pk, &stdin).groth16().run().expect("proving failed");
     } else {
-        let mut stdout_bridge = GuestLogBridge::new(Level::INFO, "sp1::stdout");
-        let mut stderr_bridge = GuestLogBridge::new(Level::WARN, "sp1::stderr");
+        // let mut stdout_bridge = GuestLogBridge::new(Level::INFO, "sp1::stdout");
+        // let mut stderr_bridge = GuestLogBridge::new(Level::WARN, "sp1::stderr");
         let (_, report) = prover
             .execute(AGGREGATION_ELF, &stdin)
             .calculate_gas(true)
-            .stdout(&mut stdout_bridge)
-            .stderr(&mut stderr_bridge)
+            // .stdout(&mut stdout_bridge)
+            // .stderr(&mut stderr_bridge)
             .run()
             .unwrap();
         println!("report: {report:?}");

@@ -18,6 +18,7 @@ use kona_proof::{
     sync::new_oracle_pipeline_cursor,
     BootInfo, FlushableCache,
 };
+use revm::interpreter::Host;
 use spin::RwLock;
 use tracing::info;
 

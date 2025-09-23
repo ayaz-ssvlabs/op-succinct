@@ -19,14 +19,14 @@ pub async fn execute_multi(
     let start_time = Instant::now();
     let prover = ProverClient::builder().mock().build();
 
-    let mut stdout_bridge = GuestLogBridge::new(Level::INFO, "sp1::stdout");
-    let mut stderr_bridge = GuestLogBridge::new(Level::WARN, "sp1::stderr");
+    // let mut stdout_bridge = GuestLogBridge::new(Level::INFO, "sp1::stdout");
+    // let mut stderr_bridge = GuestLogBridge::new(Level::WARN, "sp1::stderr");
 
     let (_, report) = prover
         .execute(get_range_elf_embedded(), &sp1_stdin)
         .calculate_gas(true)
-        .stdout(&mut stdout_bridge)
-        .stderr(&mut stderr_bridge)
+        // .stdout(&mut stdout_bridge)
+        // .stderr(&mut stderr_bridge)
         .run()
         .unwrap();
 
