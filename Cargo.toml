@@ -73,23 +73,23 @@ strum_macros = "0.27.1"
 tempfile = "3.10.1"
 
 # kona
-kona-mpt = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1" }
-kona-derive = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1", default-features = false }
-kona-driver = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1" }
-kona-preimage = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1", features = [
+kona-mpt = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4" }
+kona-derive = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4", default-features = false }
+kona-driver = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4" }
+kona-preimage = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4", features = [
     "rkyv",
     "serde",
 ] }
-kona-executor = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1" }
-kona-proof = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1" }
+kona-executor = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4" }
+kona-proof = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4" }
 
-kona-client = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1" }
-kona-host = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1" }
-kona-providers-alloy = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1" }
-kona-rpc = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1", default-features = false }
-kona-protocol = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1", default-features = false }
-kona-registry = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1", default-features = false }
-kona-genesis = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.1", default-features = false }
+kona-client = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4" }
+kona-host = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4" }
+kona-providers-alloy = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4" }
+kona-rpc = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4", default-features = false }
+kona-protocol = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4", default-features = false }
+kona-registry = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4", default-features = false }
+kona-genesis = { git = "https://github.com/ayaz-ssvlabs/kona", tag = "kona-client/v1.0.2-ssv.4", default-features = false }
 
 
 # op-succinct

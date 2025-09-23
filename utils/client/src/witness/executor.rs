@@ -18,7 +18,6 @@ use kona_proof::{
     sync::new_oracle_pipeline_cursor,
     BootInfo, FlushableCache,
 };
-use revm::interpreter::Host;
 use spin::RwLock;
 use tracing::info;
 
@@ -134,17 +133,15 @@ pub trait WitnessExecutor {
             None,
         );
         let mut driver = Driver::new(cursor, executor, pipeline);
-        // Run the derivation pipeline until we are able to produce the output root of the claimed
-        // L2 block.
-
+        
         // Use custom advance to target with cycle tracking.
         #[cfg(target_os = "zkvm")]
         println!("cycle-tracker-report-start: block-execution-and-derivation");
-        let (safe_head, output_root) = advance_to_target(
+        
+        let (safe_head, output_root) = advance_to_target::<O, _, _>(
             &mut driver,
             rollup_config.as_ref(),
             Some(boot.claimed_l2_block_number),
-            &mut l2_provider.clone(),
         )
         .await?;
         #[cfg(target_os = "zkvm")]
