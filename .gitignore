@@ -52,3 +52,8 @@ configs/
 config.alloy
 
 .env
+
+.idea
+
+vendor/
+contracts/foundry.lock
