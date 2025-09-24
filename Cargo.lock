@@ -5192,6 +5192,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-trie",
  "op-alloy-rpc-types-engine",
+ "serde",
  "thiserror 2.0.12",
 ]
 
@@ -6886,6 +6887,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-sol-types",
+ "alloy-trie",
  "anyhow",
  "async-trait",
  "cfg-if",
@@ -6893,6 +6895,7 @@ dependencies = [
  "kona-driver",
  "kona-executor",
  "kona-genesis",
+ "kona-mpt",
  "kona-preimage",
  "kona-proof",
  "kona-protocol",

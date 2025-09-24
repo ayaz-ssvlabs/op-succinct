@@ -1,5 +1,5 @@
 use alloy_consensus::BlockBody;
-use alloy_primitives::{address, Address, B256};
+use alloy_primitives::{address, Address, B256, U256};
 use alloy_rlp::Decodable;
 use anyhow::Result;
 use kona_derive::{
@@ -14,12 +14,17 @@ use kona_proof::{errors::OracleProviderError, FlushableCache, HintType};
 use kona_protocol::L2BlockInfo;
 use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
 use std::fmt::Debug;
+use kona_mpt::TrieHinter;
+use kona_mpt::{TrieNode, Nibbles, TrieNodeError};
+use alloy_trie::TrieAccount;
+use alloy_primitives::{b256, keccak256};
 use kona_proof::{executor::KonaExecutor, l2::OracleL2ChainProvider};
 
 type MyKonaExecutor<'a, O> = KonaExecutor<'a, OracleL2ChainProvider<O>, OracleL2ChainProvider<O>, crate::precompiles::ZkvmOpEvmFactory>;
 use revm::primitives::StorageKey;
 use revm::context::JournalTr;
 use revm::{Journal, JournalEntry};
+use revm::interpreter::Host;
 use tracing::{error, info, warn};
 
 /// Fetches the safe head hash of the L2 chain based on the agreed upon L2 output root in the
@@ -62,6 +67,7 @@ pub async fn advance_to_target<'a, O, DP, P>(
     driver: &'a mut Driver<MyKonaExecutor<'a, O>, DP, P>,
     cfg: &RollupConfig,
     mut target: Option<u64>,
+    l2_provider: OracleL2ChainProvider<O>,
 ) -> DriverResult<(L2BlockInfo, B256), <MyKonaExecutor<'a, O> as Executor>::Error>
 where
     DP: DriverPipeline<P> + Send + Sync + Debug,
@@ -184,7 +190,7 @@ where
         );
 
         if let Some(tb) = target {
-            if tip_cursor.l2_safe_head.block_info.number >= tb {
+            if block.header.number >= tb-1 {
                 info!(target: "client", "Derivation complete, reached L2 safe head.");
 
                 let safe_block_number = tip_cursor.l2_safe_head.block_info.number;
@@ -194,13 +200,48 @@ where
                 let _sealed_header = tip_cursor.l2_safe_head_header.clone();
 
                 // Use trie_db to fetch state of latest block in order to read mailbox contract state
-                let mailbox_addr: Address = address!("0xF67D90d846731f65313EA43c89d377Cd22602e0d");
+                // let mailbox_addr: Address = address!("0xF67D90d846731f65313EA43c89d377Cd22602e0d");
+                let mailbox_addr: Address = address!("0xD74CA64401349626711A81b7473C3649BAAc6886");
+
+                // TODO: either
                 let storage_key = StorageKey::from(0x0_u64);
+                // TODO: or use
+                let slot = 0;
+
+
+                let builder_mut = driver.executor.inner.as_mut().unwrap();
+
+                let trie_provider = &mut builder_mut.trie_db;
+
+                // TODO: this seems to be optional
+                l2_provider.hint_storage_proof(mailbox_addr, U256::from(1), tb-1);
+
+                let mut state_trie = TrieNode::new_blinded(block.header.state_root);
+                let account_key = Nibbles::unpack(mailbox_addr);
+                let raw_account = state_trie.open(&account_key, &l2_provider);//?.ok_or(TrieNodeError::KeyNotFound)?;
+                match raw_account {
+                    Ok(value) => {
+                        println!("val");
+                        let account = TrieAccount::decode(&mut value.unwrap().as_ref());
+
+                        // Fetch the storage slot value from the account.
+                        let mut storage_trie = TrieNode::new_blinded(account.unwrap().storage_root);
+                        let slot_key = Nibbles::unpack(keccak256(U256::from(slot).to_be_bytes::<32>()));
+                        let slot_value = storage_trie.open(&slot_key, &l2_provider).unwrap();
+
+
+                    },
+                    Err(e) => {
+                        println!("Failed to state_trie open. Error: {:?}", e);
+                    }
+                }
+
 
                 // Access trie_db from driver.executor.inner and create journal for storage access
-                let builder_mut = driver.executor.inner.as_mut().unwrap();
+
                 let mut journal: Journal<_, JournalEntry> = Journal::new(&mut builder_mut.trie_db);
                 let storage_state = journal.sload(mailbox_addr, storage_key);
+                // let storage_state = builder_mut.trie_db.(mailbox_addr, storage_key);
 
                 match storage_state {
                     Ok(value) => {
