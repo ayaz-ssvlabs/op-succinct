@@ -63,16 +63,15 @@ where
 /// - `Ok((l2_safe_head, output_root))` - A tuple containing the [L2BlockInfo] of the produced block
 ///   and the output root.
 /// - `Err(e)` - An error if the block could not be produced.
-pub async fn advance_to_target<'a, O, DP, P>(
-    driver: &'a mut Driver<MyKonaExecutor<'a, O>, DP, P>,
+pub async fn advance_to_target<E, DP, P>(
+    driver: &mut Driver<E, DP, P>,
     cfg: &RollupConfig,
     mut target: Option<u64>,
-    l2_provider: OracleL2ChainProvider<O>,
-) -> DriverResult<(L2BlockInfo, B256), <MyKonaExecutor<'a, O> as Executor>::Error>
+) -> DriverResult<(L2BlockInfo, B256), E::Error>
 where
+    E: Executor + Send + Sync + Debug,
     DP: DriverPipeline<P> + Send + Sync + Debug,
     P: Pipeline + SignalReceiver + Send + Sync + Debug,
-    O: CommsClient + FlushableCache + Send + Sync + Debug,
 {
     loop {
         // Check if we have reached the target block number.
@@ -173,7 +172,7 @@ where
                     .unwrap_or_default()
                     .into_iter()
                     .map(|tx| OpTxEnvelope::decode(&mut tx.as_ref()).map_err(DriverError::Rlp))
-                    .collect::<DriverResult<Vec<OpTxEnvelope>, <MyKonaExecutor<'a, O> as Executor>::Error>>()?,
+                    .collect::<DriverResult<Vec<OpTxEnvelope>, E::Error>>()?,
                 ommers: Vec::new(),
                 withdrawals: None,
             },

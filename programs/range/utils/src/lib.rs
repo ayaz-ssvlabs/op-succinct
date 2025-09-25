@@ -119,9 +119,8 @@ where
 
     log_info!("Finished blocks verification. Now computing mailbox root...");
 
-    // Compute mailbox root from L2 provider
-    // let mailbox_root = compute_mailbox_root(&boot_info, l2_provider_for_mailbox.as_mut()).await;
-    // let mailbox_root = compute_mailbox_root_hash(mailbox_store);
+    let mailbox_root = compute_mailbox_root_hash(mailbox_store);
+    log_info!("Mailbox root hash computed: {:?}", mailbox_root);
 
     // Commit BootInfoStruct including the mailbox root.
     let boot_info_struct = BootInfoStruct {
@@ -130,15 +129,12 @@ where
         l2PostRoot: boot_info.claimed_l2_output_root,
         l2BlockNumber: boot_info.claimed_l2_block_number,
         rollupConfigHash: hash_rollup_config(&boot_info.rollup_config),
+        mailboxRoot: mailbox_root,
     };
 
     sp1_zkvm::io::commit(&boot_info_struct);
 }
 
-/// Computes the mailbox root for the final L2 state referenced by `boot_info`.
-/// Inputs:
-/// - `boot_info`: Includes the claimed L2 block number
-/// - `l2_provider`: A provider that can retrieve L2 headers
 // async fn compute_mailbox_root(
 //     _boot_info: &BootInfo,
 //     l2_provider: Option<&mut OracleL2ChainProvider<PreimageStore>>,
@@ -213,86 +209,59 @@ where
 //     // compute_mailbox_root_hash(&_mailbox_roots)
 // }
 
-/// Returns a list of (chainID, inbox root, outbox root).
-/// Merges inbox and outbox roots by chainID, fills missing roots with B256::ZERO, and sorts by
-/// chainID.
-// pub fn get_mailbox_root() -> Vec<(u64, B256, B256)> {
-//     let inbox_roots = get_inbox_roots();
-//     let outbox_roots = get_outbox_roots();
-//
-//     // Collect all unique chain IDs from both lists
-//     let mut chain_ids: Vec<u64> = inbox_roots.iter().map(|(id, _)| *id).collect();
-//     chain_ids.extend(outbox_roots.iter().map(|(id, _)| *id));
-//     chain_ids.sort_unstable();
-//     chain_ids.dedup();
-//
-//     // For each chain ID, find inbox and outbox roots, or use B256::ZERO
-//     let mut result = Vec::with_capacity(chain_ids.len());
-//     for chain_id in chain_ids {
-//         let inbox = inbox_roots
-//             .iter()
-//             .find(|(id, _)| *id == chain_id)
-//             .map(|(_, root)| *root)
-//             .unwrap_or(B256::ZERO);
-//         let outbox = outbox_roots
-//             .iter()
-//             .find(|(id, _)| *id == chain_id)
-//             .map(|(_, root)| *root)
-//             .unwrap_or(B256::ZERO);
-//         result.push((chain_id, inbox, outbox));
-//     }
-//     result
-// }
 
-// Returns a list of (chainID, inbox root).
-// TODO
-// pub fn get_inbox_roots() -> Vec<(u64, B256)> {
-//     Vec::new()
-// }
+pub fn compute_mailbox_root_hash(mailbox_store: MailboxStore) -> B256 {
+    let mut bytes = Vec::new();
 
-// Returns a list of (chainID, outbox root).
-// TODO
-// pub fn get_outbox_roots() -> Vec<(u64, B256)> {
-//     Vec::new()
-// }
+    let mut chain_ids: Vec<u64> = mailbox_store.decode_inbox_chains();
+    chain_ids.extend(mailbox_store.decode_outbox_chains());
+    chain_ids.sort_unstable();
+    chain_ids.dedup();
 
-// pub fn compute_mailbox_root_hash(mailbox_store: MailboxStore) -> B256 {
-//     let mut bytes = Vec::new();
-//
-//     let mut chain_ids: Vec<u64> = mailbox_store.decode_inbox_chains();
-//     chain_ids.extend(mailbox_store.decode_outbox_chains());
-//     chain_ids.sort_unstable();
-//     chain_ids.dedup();
-//
-//     // Prefix
-//     bytes.extend_from_slice(b"MAILBOX");
-//
-//     // Number of chainIDs (N) as u64, big-endian
-//     bytes.extend_from_slice(&(chain_ids.len() as u64).to_be_bytes());
-//
-//     let inbox_roots: Vec<Bytes32> = Vec::new();
-//
-//     for (chain_id) in chain_ids {
-//         let selected_index = -1;
-//
-//         for (idx, inbox_chain_id) in mailbox_store.decode_inbox_chains().iter().enumerate() {
-//             if chain_id == *inbox_chain_id {
-//                 // selected_index = idx;
-//                 break
-//             }
-//         }
-//
-//         if selected_index != -1 {
-//             let inbox_root = mailbox_store.decode_inbox_roots()[selected_index];
-//             // inbox_roots.push(inbox_root)
-//         }
-//     }
-//
-//     // for (chain_id, inbox_root, outbox_root) in  {
-//         // bytes.extend_from_slice(&chain_id.to_be_bytes());
-//         // bytes.extend_from_slice(inbox_root.as_slice());
-//         // bytes.extend_from_slice(outbox_root.as_slice());
-//     // }
-//
-//     B256::from(keccak256(&bytes))
-// }
+    // Prefix
+    bytes.extend_from_slice(b"MAILBOX");
+
+    // Number of chainIDs (N) as u64, big-endian
+    bytes.extend_from_slice(&(chain_ids.len() as u64).to_be_bytes());
+
+    let mut inbox_roots: Vec<[u8; 32]> = Vec::new();
+    let mut outbox_roots: Vec<[u8; 32]> = Vec::new();
+
+    for chain_id in chain_ids {
+        // Find inbox index using Option<usize>
+        let inbox_index = mailbox_store
+            .decode_inbox_chains()
+            .iter()
+            .position(|&inbox_chain_id| chain_id == inbox_chain_id);
+
+        if let Some(index) = inbox_index {
+            let inbox_root = mailbox_store.decode_inbox_roots()[index];
+            inbox_roots.push(inbox_root);
+        } else {
+            inbox_roots.push(Default::default());
+        }
+
+        // Find outbox index using Option<usize>
+        let outbox_index = mailbox_store
+            .decode_outbox_chains()
+            .iter()
+            .position(|&outbox_chain_id| chain_id == outbox_chain_id);
+
+        if let Some(index) = outbox_index {
+            let outbox_root = mailbox_store.decode_outbox_roots()[index];
+            outbox_roots.push(outbox_root);
+        } else {
+            outbox_roots.push(Default::default());
+        }
+    }
+
+    for inbox_root in &inbox_roots {
+        bytes.extend_from_slice(inbox_root);
+    }
+
+    for outbox_root in &outbox_roots {
+        bytes.extend_from_slice(outbox_root);
+    }
+
+    B256::from(keccak256(&bytes))
+}

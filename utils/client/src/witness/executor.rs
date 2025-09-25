@@ -10,7 +10,6 @@ use kona_derive::traits::{
 use kona_driver::{Driver, DriverPipeline, PipelineCursor};
 use kona_executor::TrieDBProvider;
 use kona_genesis::RollupConfig;
-use kona_mpt::TrieHinter;
 use kona_preimage::CommsClient;
 use kona_proof::{
     executor::KonaExecutor,
@@ -139,11 +138,10 @@ pub trait WitnessExecutor {
         #[cfg(target_os = "zkvm")]
         println!("cycle-tracker-report-start: block-execution-and-derivation");
         
-        let (safe_head, output_root) = advance_to_target::<O, _, _>(
+        let (safe_head, output_root) = advance_to_target(
             &mut driver,
             rollup_config.as_ref(),
             Some(boot.claimed_l2_block_number),
-            l2_provider,
         )
         .await?;
         #[cfg(target_os = "zkvm")]
