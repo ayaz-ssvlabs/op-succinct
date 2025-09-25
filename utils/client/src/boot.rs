@@ -36,7 +36,6 @@ sol! {
         bytes32 l2PostRoot;
         uint64 l2BlockNumber;
         bytes32 rollupConfigHash;
-        bytes32 mailboxRoot;
     }
 }
 
@@ -48,8 +47,6 @@ impl From<BootInfo> for BootInfoStruct {
             l2PostRoot: boot_info.claimed_l2_output_root,
             l2BlockNumber: boot_info.claimed_l2_block_number,
             rollupConfigHash: hash_rollup_config(&boot_info.rollup_config),
-            // Default value
-            mailboxRoot: B256::ZERO,
         }
     }
 }

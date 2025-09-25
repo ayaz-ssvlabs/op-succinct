@@ -21,7 +21,7 @@ fn main() {
         let witness_rkyv_bytes: Vec<u8> = sp1_zkvm::io::read_vec();
         let witness_data = rkyv::from_bytes::<DefaultWitnessData, Error>(&witness_rkyv_bytes)
             .unwrap_or_else(|e| {
-                eprintln!("Failed to deserialize witness data:");
+                eprintln!("Failed to deserialize witness data!!!");
                 eprintln!("Error: {}", e);
                 
                 // Print error chain/causes
