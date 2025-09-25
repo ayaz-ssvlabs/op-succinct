@@ -30,6 +30,14 @@ pub fn hash_rollup_config(config: &RollupConfig) -> B256 {
 
 sol! {
     #[derive(Debug, Serialize, Deserialize)]
+    struct MailboxInfoStruct {
+        bytes32[] inbox_chains;
+        bytes32[] outbox_chains;
+        bytes32[] inbox_roots;
+        bytes32[] outbox_roots;
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
     struct BootInfoStruct {
         bytes32 l1Head;
         bytes32 l2PreRoot;
@@ -37,18 +45,26 @@ sol! {
         uint64 l2BlockNumber;
         bytes32 rollupConfigHash;
         bytes32 mailboxRoot;
+        MailboxInfoStruct mailboxInfo;
     }
 }
 
-impl From<BootInfo> for BootInfoStruct {
-    fn from(boot_info: BootInfo) -> Self {
-        BootInfoStruct {
-            l1Head: boot_info.l1_head,
-            l2PreRoot: boot_info.agreed_l2_output_root,
-            l2PostRoot: boot_info.claimed_l2_output_root,
-            l2BlockNumber: boot_info.claimed_l2_block_number,
-            rollupConfigHash: hash_rollup_config(&boot_info.rollup_config),
-            mailboxRoot: B256::ZERO,
-        }
-    }
-}
+// TODO: is this unused ?
+// impl From<BootInfo> for BootInfoStruct {
+//     fn from(boot_info: BootInfo) -> Self {
+//         BootInfoStruct {
+//             l1Head: boot_info.l1_head,
+//             l2PreRoot: boot_info.agreed_l2_output_root,
+//             l2PostRoot: boot_info.claimed_l2_output_root,
+//             l2BlockNumber: boot_info.claimed_l2_block_number,
+//             rollupConfigHash: hash_rollup_config(&boot_info.rollup_config),
+//             mailboxRoot: B256::ZERO,
+//             mailboxInfo: MailboxInfoStruct {
+//                 inbox_chains: vec![B256::ZERO],
+//                 outbox_chains: vec![B256::ZERO],
+//                 inbox_roots: vec![B256::ZERO],
+//                 outbox_roots: vec![B256::ZERO],
+//             },
+//         }
+//     }
+// }

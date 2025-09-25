@@ -8,7 +8,7 @@ use kona_executor::{TrieDB, TrieDBProvider};
 use kona_proof::{l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, BootInfo};
 use kona_protocol::BatchValidationProvider; // enables block_by_number on the provider
 use op_succinct_client_utils::{
-    boot::{hash_rollup_config, BootInfoStruct},
+    boot::{hash_rollup_config, BootInfoStruct, MailboxInfoStruct},
     witness::{
         executor::{get_inputs_for_pipeline, WitnessExecutor},
         preimage_store::PreimageStore,
@@ -119,10 +119,16 @@ where
 
     log_info!("Finished blocks verification. Now computing mailbox root...");
 
-    let mailbox_root = compute_mailbox_root(mailbox_store);
+    let mailbox_root = compute_mailbox_root(mailbox_store.clone());
     log_info!("Mailbox root hash computed: {:?}", mailbox_root);
 
-    // Commit BootInfoStruct including the mailbox root.
+    let mailbox_info = MailboxInfoStruct {
+        inbox_chains: mailbox_store.inbox_chains.iter().map(|b| B256::from_slice(&b.0)).collect(),
+        outbox_chains: mailbox_store.outbox_chains.iter().map(|b| B256::from_slice(&b.0)).collect(),
+        inbox_roots: mailbox_store.inbox_roots.iter().map(|b| B256::from_slice(&b.0)).collect(),
+        outbox_roots: mailbox_store.outbox_roots.iter().map(|b| B256::from_slice(&b.0)).collect(),
+    };
+
     let boot_info_struct = BootInfoStruct {
         l1Head: boot_info.l1_head,
         l2PreRoot: boot_info.agreed_l2_output_root,
@@ -130,6 +136,7 @@ where
         l2BlockNumber: boot_info.claimed_l2_block_number,
         rollupConfigHash: hash_rollup_config(&boot_info.rollup_config),
         mailboxRoot: mailbox_root,
+        mailboxInfo: mailbox_info,
     };
 
     sp1_zkvm::io::commit(&boot_info_struct);
@@ -147,10 +154,11 @@ pub fn compute_mailbox_root(mailbox_store: MailboxStore) -> B256 {
 
     bytes.extend_from_slice(&(chain_ids.len() as u64).to_be_bytes());
 
-    let mut inbox_roots: Vec<[u8; 32]> = Vec::new();
-    let mut outbox_roots: Vec<[u8; 32]> = Vec::new();
 
     for chain_id in chain_ids {
+        // Write the chain ID first
+        bytes.extend_from_slice(&chain_id.to_be_bytes());
+
         let inbox_index = mailbox_store
             .decode_inbox_chains()
             .iter()
@@ -158,9 +166,10 @@ pub fn compute_mailbox_root(mailbox_store: MailboxStore) -> B256 {
 
         if let Some(index) = inbox_index {
             let inbox_root = mailbox_store.decode_inbox_roots()[index];
-            inbox_roots.push(inbox_root);
+            bytes.extend_from_slice(&inbox_root);
         } else {
-            inbox_roots.push(Default::default());
+            // Write 32 zero bytes for missing inbox root
+            bytes.extend_from_slice(&[0u8; 32]);
         }
 
         let outbox_index = mailbox_store
@@ -170,18 +179,11 @@ pub fn compute_mailbox_root(mailbox_store: MailboxStore) -> B256 {
 
         if let Some(index) = outbox_index {
             let outbox_root = mailbox_store.decode_outbox_roots()[index];
-            outbox_roots.push(outbox_root);
+            bytes.extend_from_slice(&outbox_root);
         } else {
-            outbox_roots.push(Default::default());
+            // Write 32 zero bytes for missing outbox root
+            bytes.extend_from_slice(&[0u8; 32]);
         }
-    }
-
-    for inbox_root in &inbox_roots {
-        bytes.extend_from_slice(inbox_root);
-    }
-
-    for outbox_root in &outbox_roots {
-        bytes.extend_from_slice(outbox_root);
     }
 
     B256::from(keccak256(&bytes))
