@@ -7013,6 +7013,7 @@ dependencies = [
  "cargo_metadata",
  "cfg-if",
  "futures",
+ "hex",
  "kona-derive",
  "kona-genesis",
  "kona-host",

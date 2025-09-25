@@ -85,7 +85,10 @@ where
 
     log_info!("Starting blocks verification...");
 
-    let (oracle, beacon) = witness_data.get_oracle_and_blob_provider().await.unwrap();
+
+    let (inbox_chains, outbox_chains, inbox_roots, outbox_roots) = witness_data.clone().get_mailbox_inputs().await.unwrap();
+
+    let (oracle, beacon) = witness_data.clone().get_oracle_and_blob_provider().await.unwrap();
 
     let (boot_info, input) = get_inputs_for_pipeline(oracle.clone()).await.unwrap();
     let mut l2_provider_for_mailbox: Option<OracleL2ChainProvider<PreimageStore>> = None;
