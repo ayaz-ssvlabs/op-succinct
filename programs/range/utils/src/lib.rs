@@ -119,7 +119,7 @@ where
 
     log_info!("Finished blocks verification. Now computing mailbox root...");
 
-    let mailbox_root = compute_mailbox_root_hash(mailbox_store);
+    let mailbox_root = compute_mailbox_root(mailbox_store);
     log_info!("Mailbox root hash computed: {:?}", mailbox_root);
 
     // Commit BootInfoStruct including the mailbox root.
@@ -135,82 +135,7 @@ where
     sp1_zkvm::io::commit(&boot_info_struct);
 }
 
-// async fn compute_mailbox_root(
-//     _boot_info: &BootInfo,
-//     l2_provider: Option<&mut OracleL2ChainProvider<PreimageStore>>,
-// ) -> B256 {
-//     log_info!("Inside compute mailbox root...");
-//
-//     // Assert we have a provider
-//     let Some(provider) = l2_provider else {
-//         log_warn!("No L2 provider available; skipping mailbox state reads");
-//         return B256::ZERO;
-//     };
-//
-//     // Hardcoded Mailbox address
-//     // TODO: let it be an input or enforce common address across chains
-//     let mailbox_addr: Address = address!("0xF67D90d846731f65313EA43c89d377Cd22602e0d");
-//     log_debug!("Computed mailbox address");
-//
-//     // Attempt getting a block
-//     // Try min(claimed_number, safe_number) to avoid going past safe head
-//     // though ultimately we need to ensure that we can read the claimed_number block
-//     // Probably we'll need to advance the l2_provider to it first
-//     let claimed_number = _boot_info.claimed_l2_block_number;
-//     let safe_head = provider.l2_safe_head().await.unwrap();
-//     let safe_header = provider.header_by_hash(safe_head).unwrap();
-//     let safe_number = safe_header.number;
-//     log_info!("Safe head block number: {safe_number}. Claimed number: {claimed_number}");
-//     let block = provider.block_by_number(claimed_number.min(safe_number)).await;
-//     let block = match block {
-//         Ok(b) => {
-//             log_info!("Mailbox block loaded: {}", claimed_number.min(safe_number));
-//             b
-//         }
-//         Err(e) => {
-//             log_error!(
-//                 "Failed to load L2 block at number {}; skipping mailbox state reads. Error: {:?}",
-//                 claimed_number.min(safe_number),
-//                 e
-//             );
-//             return B256::ZERO;
-//         }
-//     };
-//
-//     // Seal block
-//     let sealed_header = block.header.seal_slow();
-//     log_debug!("Sealed header for mailbox computation");
-//
-//     // Construct trie DB
-//     // let fetcher = provider.clone();
-//     // let hinter = provider.clone();
-//     // let mut db = TrieDB::new(sealed_header, fetcher, hinter);
-//     // log_debug!("Created trie DB for mailbox reads");
-//
-//     // Get mailbox trie account
-//     // let trie_account = db.get_trie_account(&mailbox_addr, claimed_number.min(safe_number));
-//     // match trie_account {
-//     //     Ok(_account) => match _account {
-//     //         Some(_accountv) => {
-//     //             log_debug!("Mailbox account exists in state");
-//     //         }
-//     //         None => {
-//     //             log_warn!("Mailbox account not present in state");
-//     //         }
-//     //     },
-//     //     Err(_e) => {
-//     //         log_error!("Mailbox trie account error");
-//     //     }
-//     // }
-//
-//     // Get list of (chainID, inbox root, outbox root)
-//     // let _mailbox_roots = get_mailbox_root();
-//
-//     // compute_mailbox_root_hash(&_mailbox_roots)
-// }
-
-
-pub fn compute_mailbox_root_hash(mailbox_store: MailboxStore) -> B256 {
+pub fn compute_mailbox_root(mailbox_store: MailboxStore) -> B256 {
     let mut bytes = Vec::new();
 
     let mut chain_ids: Vec<u64> = mailbox_store.decode_inbox_chains();
@@ -218,17 +143,14 @@ pub fn compute_mailbox_root_hash(mailbox_store: MailboxStore) -> B256 {
     chain_ids.sort_unstable();
     chain_ids.dedup();
 
-    // Prefix
     bytes.extend_from_slice(b"MAILBOX");
 
-    // Number of chainIDs (N) as u64, big-endian
     bytes.extend_from_slice(&(chain_ids.len() as u64).to_be_bytes());
 
     let mut inbox_roots: Vec<[u8; 32]> = Vec::new();
     let mut outbox_roots: Vec<[u8; 32]> = Vec::new();
 
     for chain_id in chain_ids {
-        // Find inbox index using Option<usize>
         let inbox_index = mailbox_store
             .decode_inbox_chains()
             .iter()
@@ -241,7 +163,6 @@ pub fn compute_mailbox_root_hash(mailbox_store: MailboxStore) -> B256 {
             inbox_roots.push(Default::default());
         }
 
-        // Find outbox index using Option<usize>
         let outbox_index = mailbox_store
             .decode_outbox_chains()
             .iter()
