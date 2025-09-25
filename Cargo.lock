@@ -4914,7 +4914,7 @@ dependencies = [
 [[package]]
 name = "kona-cli"
 version = "0.2.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "anyhow",
  "clap",
@@ -4927,7 +4927,7 @@ dependencies = [
 [[package]]
 name = "kona-client"
 version = "1.0.2"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -4966,7 +4966,7 @@ dependencies = [
 [[package]]
 name = "kona-derive"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -4986,7 +4986,7 @@ dependencies = [
 [[package]]
 name = "kona-driver"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-evm",
@@ -5007,7 +5007,7 @@ dependencies = [
 [[package]]
 name = "kona-engine"
 version = "0.1.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5045,7 +5045,7 @@ dependencies = [
 [[package]]
 name = "kona-executor"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5069,7 +5069,7 @@ dependencies = [
 [[package]]
 name = "kona-genesis"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5088,7 +5088,7 @@ dependencies = [
 [[package]]
 name = "kona-hardforks"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-eips 1.0.9",
  "alloy-primitives",
@@ -5099,7 +5099,7 @@ dependencies = [
 [[package]]
 name = "kona-host"
 version = "1.0.2"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5147,7 +5147,7 @@ dependencies = [
 [[package]]
 name = "kona-interop"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5168,12 +5168,12 @@ dependencies = [
 [[package]]
 name = "kona-macros"
 version = "0.1.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 
 [[package]]
 name = "kona-mpt"
 version = "0.2.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -5186,7 +5186,7 @@ dependencies = [
 [[package]]
 name = "kona-p2p"
 version = "0.1.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5222,7 +5222,7 @@ dependencies = [
 [[package]]
 name = "kona-preimage"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-primitives",
  "async-channel",
@@ -5236,7 +5236,7 @@ dependencies = [
 [[package]]
 name = "kona-proof"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5272,7 +5272,7 @@ dependencies = [
 [[package]]
 name = "kona-proof-interop"
 version = "0.2.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5304,7 +5304,7 @@ dependencies = [
 [[package]]
 name = "kona-protocol"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloc-no-stdlib",
  "alloy-consensus 1.0.9",
@@ -5333,7 +5333,7 @@ dependencies = [
 [[package]]
 name = "kona-providers-alloy"
 version = "0.2.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-consensus 1.0.9",
  "alloy-eips 1.0.9",
@@ -5362,7 +5362,7 @@ dependencies = [
 [[package]]
 name = "kona-registry"
 version = "0.3.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-chains",
  "alloy-op-hardforks",
@@ -5377,7 +5377,7 @@ dependencies = [
 [[package]]
 name = "kona-rpc"
 version = "0.2.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-eips 1.0.9",
  "alloy-primitives",
@@ -5405,7 +5405,7 @@ dependencies = [
 [[package]]
 name = "kona-serde"
 version = "0.2.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -5415,7 +5415,7 @@ dependencies = [
 [[package]]
 name = "kona-sources"
 version = "0.1.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-eips 1.0.9",
  "alloy-primitives",
@@ -5436,7 +5436,7 @@ dependencies = [
 [[package]]
 name = "kona-std-fpvm"
 version = "0.2.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "async-trait",
  "buddy_system_allocator",
@@ -5448,7 +5448,7 @@ dependencies = [
 [[package]]
 name = "kona-std-fpvm-proc"
 version = "0.2.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "cfg-if",
  "kona-std-fpvm",
@@ -5460,7 +5460,7 @@ dependencies = [
 [[package]]
 name = "kona-supervisor-rpc"
 version = "0.1.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-eips 1.0.9",
  "alloy-primitives",
@@ -5473,7 +5473,7 @@ dependencies = [
 [[package]]
 name = "kona-supervisor-types"
 version = "0.1.0"
-source = "git+https://github.com/ayaz-ssvlabs/kona?tag=kona-client%2Fv1.0.2-ssv.4#a889c5651777260721a1c71b433417b7edbc8cb7"
+source = "git+https://github.com/op-rs/kona?tag=kona-client%2Fv1.0.2#62a4ff9c0e6ac97b0993aba5b8e181be295b38b4"
 dependencies = [
  "alloy-eips 1.0.9",
  "alloy-primitives",
