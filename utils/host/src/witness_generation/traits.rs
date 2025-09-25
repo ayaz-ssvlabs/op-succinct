@@ -13,7 +13,7 @@ use kona_proof::{
 use op_succinct_client_utils::witness::{
     executor::{get_inputs_for_pipeline, WitnessExecutor},
     preimage_store::PreimageStore,
-    BlobData, WitnessData,
+    BlobData, WitnessData, MailboxStore,
 };
 use sp1_sdk::SP1Stdin;
 use serde_json::{json, Value};
@@ -23,6 +23,7 @@ use kzg_rs::Bytes32;
 use crate::witness_generation::{OnlineBlobStore, PreimageWitnessCollector};
 
 pub type DefaultOracleBase = CachingOracle<OracleReader<NativeChannel>, HintWriter<NativeChannel>>;
+
 
 /// Converts bytes to an integer, adds a value, and returns as bytes
 fn add_to_bytes(data: &[u8], value: u64) -> [u8; 32] {
@@ -351,33 +352,27 @@ pub trait WitnessGenerator {
             self.get_executor().run(boot_info.clone(), pipeline, cursor, l2_provider.clone()).await.unwrap();
         }
 
-        let mut inbox_chains: Vec<Bytes32> = Vec::new();
-        let mut outbox_chains: Vec<Bytes32> = Vec::new();
-        let mut inbox_roots: Vec<Bytes32> = Vec::new();
-        let mut outbox_roots: Vec<Bytes32> = Vec::new();
-
         let contract_addr = "0xD74CA64401349626711A81b7473C3649BAAc6886".parse::<Address>().unwrap();
 
-        match extract_contract_storage_data(contract_addr, boot_info.claimed_l2_block_number).await {
+        let mailbox_store = match extract_contract_storage_data(contract_addr, boot_info.claimed_l2_block_number).await {
             Ok((ic, oc, ir, or)) => {
-                inbox_chains = ic;
-                outbox_chains = oc;
-                inbox_roots = ir;
-                outbox_roots = or;
+                Arc::new(Mutex::new(MailboxStore::new(ic, oc, ir, or)))
             }
             Err(e) => {
                 // Log error but continue with empty data
                 eprintln!("Failed to extract contract storage data: {:?}", e);
+                Arc::new(Mutex::new(MailboxStore::default()))
             }
-        }
+        };
+
+        // println!("Created MailboxStore with {} inbox chains, {} outbox chains",
+        //          mailbox_store.inbox_chains.len(),
+        //          mailbox_store.outbox_chains.len());
 
         let witness = Self::WitnessData::from_parts(
             preimage_witness_store.lock().unwrap().clone(),
             blob_data.lock().unwrap().clone(),
-            inbox_chains,
-            outbox_chains,
-            inbox_roots,
-            outbox_roots,
+            mailbox_store.lock().unwrap().clone(),
         );
 
         Ok(witness)

@@ -1,5 +1,8 @@
 pub mod executor;
 pub mod preimage_store;
+mod mailbox;
+
+pub use mailbox::MailboxStore;
 
 use std::{fmt::Debug, sync::Arc};
 
@@ -17,19 +20,16 @@ pub trait WitnessData: Sized {
     fn from_parts(
         preimage_store: PreimageStore, 
         blob_data: BlobData,
-        inbox_chains: Vec<Bytes32>,
-        outbox_chains: Vec<Bytes32>,
-        inbox_roots: Vec<Bytes32>,
-        outbox_roots: Vec<Bytes32>,
+        mailbox_store: MailboxStore,
     ) -> Self;
 
     /// Consumes the WitnessData to extract its core components.
-    fn into_parts(self) -> (PreimageStore, BlobData, Vec<Bytes32>, Vec<Bytes32>, Vec<Bytes32>, Vec<Bytes32>);
+    fn into_parts(self) -> (PreimageStore, BlobData, MailboxStore);
 
     /// Gets the oracle and blob provider from the witness data and validates the correctness of the
     /// preimages.
-    async fn get_oracle_and_blob_provider(self) -> Result<(Arc<PreimageStore>, BlobStore)> {
-        let (owned_preimage_store, owned_blob_data, _inbox_chains, _outbox_chains, _inbox_roots, _outbox_roots) = self.into_parts();
+    async fn get_oracle_and_blob_provider(self) -> Result<(Arc<PreimageStore>, BlobStore, MailboxStore)> {
+        let (owned_preimage_store, owned_blob_data, mailbox_store) = self.into_parts();
 
         println!("cycle-tracker-report-start: oracle-verify");
         // Check the preimages in the witness are valid.
@@ -44,13 +44,7 @@ pub trait WitnessData: Sized {
         let beacon = BlobStore::from(owned_blob_data);
         println!("cycle-tracker-report-end: blob-verification");
 
-        Ok((oracle, beacon))
-    }
-
-    async fn get_mailbox_inputs(self) -> Result<(Vec<Bytes32>, Vec<Bytes32>, Vec<Bytes32>, Vec<Bytes32>)> {
-        let (_, _, inbox_chains, outbox_chains, inbox_roots, outbox_roots) = self.into_parts();
-
-        Ok((inbox_chains, outbox_chains, inbox_roots, outbox_roots))
+        Ok((oracle, beacon, mailbox_store))
     }
 }
 
@@ -58,10 +52,7 @@ pub trait WitnessData: Sized {
 pub struct DefaultWitnessData {
     pub preimage_store: PreimageStore,
     pub blob_data: BlobData,
-    pub inbox_chains: Vec<Bytes32>,
-    pub outbox_chains: Vec<Bytes32>,
-    pub inbox_roots: Vec<Bytes32>,
-    pub outbox_roots: Vec<Bytes32>,
+    pub mailbox_store: MailboxStore
 }
 
 #[async_trait]
@@ -69,29 +60,20 @@ impl WitnessData for DefaultWitnessData {
     fn from_parts(
         preimage_store: PreimageStore, 
         blob_data: BlobData,
-        inbox_chains: Vec<Bytes32>,
-        outbox_chains: Vec<Bytes32>,
-        inbox_roots: Vec<Bytes32>,
-        outbox_roots: Vec<Bytes32>,
+        mailbox_store: MailboxStore,
     ) -> Self {
         Self { 
             preimage_store, 
             blob_data,
-            inbox_chains,
-            outbox_chains,
-            inbox_roots,
-            outbox_roots,
+            mailbox_store
         }
     }
 
-    fn into_parts(self) -> (PreimageStore, BlobData, Vec<Bytes32>, Vec<Bytes32>, Vec<Bytes32>, Vec<Bytes32>) {
+    fn into_parts(self) -> (PreimageStore, BlobData, MailboxStore) {
         (
             self.preimage_store, 
             self.blob_data,
-            self.inbox_chains,
-            self.outbox_chains,
-            self.inbox_roots,
-            self.outbox_roots,
+            self.mailbox_store
         )
     }
 }

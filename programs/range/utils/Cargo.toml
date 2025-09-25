@@ -11,6 +11,7 @@ repository.workspace = true
 tracing.workspace = true
 anyhow.workspace = true
 rkyv.workspace = true
+kzg-rs.workspace = true
 
 alloy-primitives.workspace = true
 

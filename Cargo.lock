@@ -7094,6 +7094,7 @@ dependencies = [
  "kona-executor",
  "kona-proof",
  "kona-protocol",
+ "kzg-rs",
  "op-succinct-client-utils",
  "rkyv",
  "sp1-zkvm",

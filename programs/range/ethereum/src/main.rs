@@ -20,7 +20,21 @@ fn main() {
     kona_proof::block_on(async move {
         let witness_rkyv_bytes: Vec<u8> = sp1_zkvm::io::read_vec();
         let witness_data = rkyv::from_bytes::<DefaultWitnessData, Error>(&witness_rkyv_bytes)
-            .expect("Failed to deserialize witness data.");
+            .unwrap_or_else(|e| {
+                eprintln!("Failed to deserialize witness data:");
+                eprintln!("Error: {}", e);
+                
+                // Print error chain/causes
+                let mut current_error = &e as &dyn std::error::Error;
+                let mut error_level = 0;
+                while let Some(source) = current_error.source() {
+                    error_level += 1;
+                    eprintln!("  Caused by ({}): {}", error_level, source);
+                    current_error = source;
+                }
+                
+                panic!("Failed to deserialize witness data: {}", e);
+            });
 
         run_range_program(ETHDAWitnessExecutor::new(), witness_data).await;
     });

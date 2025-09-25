@@ -1,6 +1,8 @@
+use std::io::Bytes;
 use std::sync::{Arc, Once};
 
 use alloy_primitives::{address, keccak256, Address, Sealable, B256}; // for seal_ref_slow
+use kzg_rs::Bytes32;
 
 use kona_executor::{TrieDB, TrieDBProvider};
 use kona_proof::{l1::OracleL1ChainProvider, l2::OracleL2ChainProvider, BootInfo};
@@ -11,6 +13,7 @@ use op_succinct_client_utils::{
         executor::{get_inputs_for_pipeline, WitnessExecutor},
         preimage_store::PreimageStore,
         WitnessData,
+        MailboxStore,
     },
     BlobStore,
 };
@@ -85,10 +88,8 @@ where
 
     log_info!("Starting blocks verification...");
 
+    let (oracle, beacon, mailbox_store) = witness_data.clone().get_oracle_and_blob_provider().await.unwrap();
 
-    let (inbox_chains, outbox_chains, inbox_roots, outbox_roots) = witness_data.clone().get_mailbox_inputs().await.unwrap();
-
-    let (oracle, beacon) = witness_data.clone().get_oracle_and_blob_provider().await.unwrap();
 
     let (boot_info, input) = get_inputs_for_pipeline(oracle.clone()).await.unwrap();
     let mut l2_provider_for_mailbox: Option<OracleL2ChainProvider<PreimageStore>> = None;
@@ -120,7 +121,7 @@ where
 
     // Compute mailbox root from L2 provider
     // let mailbox_root = compute_mailbox_root(&boot_info, l2_provider_for_mailbox.as_mut()).await;
-    let mailbox_root = B256::ZERO;
+    let mailbox_root = compute_mailbox_root_hash(mailbox_store);
 
     // Commit BootInfoStruct including the mailbox root.
     let boot_info_struct = BootInfoStruct {
@@ -208,9 +209,9 @@ async fn compute_mailbox_root(
     }
 
     // Get list of (chainID, inbox root, outbox root)
-    let _mailbox_roots = get_mailbox_root();
+    // let _mailbox_roots = get_mailbox_root();
 
-    compute_mailbox_root_hash(&_mailbox_roots)
+    // compute_mailbox_root_hash(&_mailbox_roots)
 }
 
 /// Returns a list of (chainID, inbox root, outbox root).
@@ -259,21 +260,43 @@ pub fn get_outbox_roots() -> Vec<(u64, B256)> {
 /// Computes the mailbox root hash from a list of (chainID, root1, root2) tuples.
 /// The hash is keccak256("MAILBOX" || N || c1 || inbox_root(c1) || outbox_root(c1) || ... || cN ||
 /// inbox_root(cN) || outbox_root(cN))
-pub fn compute_mailbox_root_hash(mailbox_roots: &[(u64, B256, B256)]) -> B256 {
+pub fn compute_mailbox_root_hash(mailbox_store: MailboxStore) -> B256 {
     let mut bytes = Vec::new();
+
+    let mut chain_ids: Vec<u64> = mailbox_store.decode_inbox_chains();
+    chain_ids.extend(mailbox_store.decode_outbox_chains());
+    chain_ids.sort_unstable();
+    chain_ids.dedup();
 
     // Prefix
     bytes.extend_from_slice(b"MAILBOX");
 
     // Number of chainIDs (N) as u64, big-endian
-    bytes.extend_from_slice(&(mailbox_roots.len() as u64).to_be_bytes());
+    bytes.extend_from_slice(&(chain_ids.len() as u64).to_be_bytes());
 
-    // For each chainID, append chainID (u64, big-endian), inbox root, outbox root
-    for (chain_id, inbox_root, outbox_root) in mailbox_roots {
-        bytes.extend_from_slice(&chain_id.to_be_bytes());
-        bytes.extend_from_slice(inbox_root.as_slice());
-        bytes.extend_from_slice(outbox_root.as_slice());
+    let inbox_roots: Vec<Bytes32> = Vec::new();
+
+    for (chain_id) in chain_ids {
+        let selected_index = -1;
+
+        for (idx, inbox_chain_id) in mailbox_store.decode_inbox_chains().iter().enumerate() {
+            if chain_id == *inbox_chain_id {
+                // selected_index = idx;
+                break
+            }
+        }
+
+        if selected_index != -1 {
+            let inbox_root = mailbox_store.decode_inbox_roots()[selected_index];
+            // inbox_roots.push(inbox_root)
+        }
     }
+
+    // for (chain_id, inbox_root, outbox_root) in  {
+        // bytes.extend_from_slice(&chain_id.to_be_bytes());
+        // bytes.extend_from_slice(inbox_root.as_slice());
+        // bytes.extend_from_slice(outbox_root.as_slice());
+    // }
 
     B256::from(keccak256(&bytes))
 }
