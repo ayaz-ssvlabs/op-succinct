@@ -133,35 +133,35 @@ secp256k1 = { version = "0.31.0", default-features = false }
 ark-bls12-381 = { version = "0.5.0", default-features = false }
 
 # kona
-kona-mpt = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2" }
-kona-derive = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-driver = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2" }
-kona-preimage = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", features = [
+kona-mpt = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-derive = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-driver = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-preimage = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", features = [
     "rkyv",
     "serde",
 ] }
-kona-executor = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2" }
-kona-proof = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2" }
+kona-executor = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-proof = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
 
-kona-client = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2" }
-kona-host = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2" }
-kona-providers-alloy = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2" }
-kona-rpc = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-protocol = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-registry = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-genesis = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-interop = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-hardforks = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-engine = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-sources = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-cli = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-disc = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-gossip = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-peers = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-proof-interop = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-std-fpvm = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-std-fpvm-proc = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
-kona-macros = { git = "https://github.com/op-rs/kona", tag = "kona-client/v1.2.2", default-features = false }
+kona-client = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-host = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-providers-alloy = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-rpc = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-protocol = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-registry = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-genesis = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-interop = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-hardforks = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-engine = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-sources = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-cli = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-disc = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-gossip = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-peers = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-proof-interop = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-std-fpvm = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-std-fpvm-proc = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
+kona-macros = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0", default-features = false }
 
 alloy-hardforks = { version = "0.4.3", default-features = false }
 alloy-op-hardforks = { version = "0.4.3", default-features = false }
@@ -295,28 +295,28 @@ p256 = { git = "https://github.com/sp1-patches/elliptic-curves", tag = "patch-p2
 k256 = { git = "https://github.com/sp1-patches/elliptic-curves", tag = "patch-k256-13.4-sp1-5.0.0" }
 
 [patch."https://github.com/op-rs/kona"]
-kona-cli = { path = "third_party/kona-fork/crates/utilities/cli" }
-kona-client = { path = "third_party/kona-fork/bin/client" }
-kona-derive = { path = "third_party/kona-fork/crates/protocol/derive" }
-kona-disc = { path = "third_party/kona-fork/crates/node/disc" }
-kona-driver = { path = "third_party/kona-fork/crates/proof/driver" }
-kona-engine = { path = "third_party/kona-fork/crates/node/engine" }
-kona-executor = { path = "third_party/kona-fork/crates/proof/executor" }
-kona-genesis = { path = "third_party/kona-fork/crates/protocol/genesis" }
-kona-gossip = { path = "third_party/kona-fork/crates/node/gossip" }
-kona-hardforks = { path = "third_party/kona-fork/crates/protocol/hardforks" }
-kona-host = { path = "third_party/kona-fork/bin/host" }
-kona-interop = { path = "third_party/kona-fork/crates/protocol/interop" }
-kona-macros = { path = "third_party/kona-fork/crates/utilities/macros" }
-kona-mpt = { path = "third_party/kona-fork/crates/proof/mpt" }
-kona-peers = { path = "third_party/kona-fork/crates/node/peers" }
-kona-preimage = { path = "third_party/kona-fork/crates/proof/preimage" }
-kona-proof = { path = "third_party/kona-fork/crates/proof/proof" }
-kona-proof-interop = { path = "third_party/kona-fork/crates/proof/proof-interop" }
-kona-protocol = { path = "third_party/kona-fork/crates/protocol/protocol" }
-kona-providers-alloy = { path = "third_party/kona-fork/crates/providers/providers-alloy" }
-kona-registry = { path = "third_party/kona-fork/crates/protocol/registry" }
-kona-rpc = { path = "third_party/kona-fork/crates/node/rpc" }
-kona-sources = { path = "third_party/kona-fork/crates/node/sources" }
-kona-std-fpvm = { path = "third_party/kona-fork/crates/proof/std-fpvm" }
-kona-std-fpvm-proc = { path = "third_party/kona-fork/crates/proof/std-fpvm-proc" }
+kona-mpt = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-derive = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-driver = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-preimage = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-executor = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-proof = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-client = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-host = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-providers-alloy = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-rpc = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-protocol = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-registry = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-genesis = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-interop = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-hardforks = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-engine = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-sources = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-cli = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-disc = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-gossip = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-peers = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-proof-interop = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-std-fpvm = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-std-fpvm-proc = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
+kona-macros = { git = "https://github.com/ayaz-ssvlabs/kona", rev = "385683d1934c722efbdaca711ce02a2ddd8d31f0" }
