@@ -40,4 +40,9 @@ pub fn build_all() {
     //     "eigenda-range-elf-embedded",
     //     Some(vec!["embedded".to_string()]),
     // );
+    // build_program(
+    //     "range/altda",
+    //     "altda-range-elf-embedded",
+    //     Some(vec!["embedded".to_string()]),
+    // );
 }

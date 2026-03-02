@@ -1,10 +1,24 @@
-use cargo_metadata::MetadataCommand;
 use lazy_static::lazy_static;
 use std::path::PathBuf;
 
 fn get_workspace_root() -> PathBuf {
-    let metadata = MetadataCommand::new().exec().unwrap();
-    metadata.workspace_root.into()
+    let start = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let mut dir = start.as_path();
+
+    loop {
+        let has_cargo_toml = dir.join("Cargo.toml").is_file();
+        let has_contracts_dir = dir.join("contracts").is_dir();
+        if has_cargo_toml && has_contracts_dir {
+            return dir.to_path_buf();
+        }
+
+        match dir.parent() {
+            Some(parent) => dir = parent,
+            None => break,
+        }
+    }
+
+    start
 }
 
 lazy_static! {

@@ -52,6 +52,8 @@ jobs:
           ~/.sp1/bin/cargo-prove prove build --elf-name celestia-range-elf-embedded --docker --tag v5.2.2 --output-directory ../../../elf --features embedded
           cd ../eigenda
           ~/.sp1/bin/cargo-prove prove build --elf-name eigenda-range-elf-embedded --docker --tag v5.2.2 --output-directory ../../../elf --features embedded
+          cd ../altda
+          ~/.sp1/bin/cargo-prove prove build --elf-name altda-range-elf-embedded --docker --tag v5.2.2 --output-directory ../../../elf --features embedded
           cd ../../aggregation
           ~/.sp1/bin/cargo-prove prove build --elf-name aggregation-elf --docker --tag v5.2.2 --output-directory ../../elf
           cd ../../

@@ -10,7 +10,7 @@ use kona_proof::{errors::OracleProviderError, HintType};
 use kona_protocol::L2BlockInfo;
 use op_alloy_consensus::{OpBlock, OpTxEnvelope, OpTxType};
 use std::fmt::Debug;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 /// Fetches the safe head hash of the L2 chain based on the agreed upon L2 output root in the
 /// [BootInfo].
@@ -30,7 +30,13 @@ where
         .get_exact(PreimageKey::new_keccak256(*agreed_l2_output_root), output_preimage.as_mut())
         .await?;
 
-    output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)
+    let safe_head_hash: B256 =
+        output_preimage[96..128].try_into().map_err(OracleProviderError::SliceConversion)?;
+    debug!(
+        target: "client",
+        "Resolved safe head hash from agreed output root: agreed_l2_output_root={agreed_l2_output_root} safe_head_hash={safe_head_hash}"
+    );
+    Ok(safe_head_hash)
 }
 
 // Sourced from kona/crates/driver/src/core.rs with modifications to use the L2 provider's caching
@@ -92,6 +98,8 @@ where
             }
             Err(e) => {
                 error!(target: "client", "Failed to produce payload: {:?}", e);
+                #[cfg(target_os = "zkvm")]
+                println!("zkvm: produce_payload error: {:?}", e);
                 return Err(DriverError::Pipeline(e));
             }
         };
@@ -106,6 +114,13 @@ where
             Ok(outcome) => outcome,
             Err(e) => {
                 error!(target: "client", "Failed to execute L2 block: {}", e);
+                #[cfg(target_os = "zkvm")]
+                println!(
+                    "zkvm: execute_payload error at parent={} timestamp={}: {}",
+                    tip_cursor.l2_safe_head.block_info.number,
+                    attributes.payload_attributes.timestamp,
+                    e
+                );
 
                 if cfg.is_holocene_active(attributes.payload_attributes.timestamp) {
                     // Retry with a deposit-only block.
@@ -133,6 +148,8 @@ where
                                 target: "client",
                                 "Critical - Failed to execute deposit-only block: {e}",
                             );
+                            #[cfg(target_os = "zkvm")]
+                            println!("zkvm: execute_payload deposit-only failed: {e}");
                             return Err(DriverError::Executor(e));
                         }
                     }

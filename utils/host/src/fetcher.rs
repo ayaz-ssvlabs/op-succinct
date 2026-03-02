@@ -676,6 +676,14 @@ impl OPSuccinctDataFetcher {
             l2_claim_hash: agreed_l2_head_hash.0.into(),
         };
         let agreed_l2_output_root = keccak256(l2_output_encoded.abi_encode());
+        tracing::debug!(
+            "Computed agreed output root: block={} head_hash={} state_root={} storage_hash={} agreed_output_root={}",
+            l2_start_block,
+            agreed_l2_head_hash,
+            l2_output_state_root,
+            l2_output_storage_hash,
+            agreed_l2_output_root
+        );
 
         // Get L2 claim data.
         let l2_claim_block = l2_provider.get_block_by_number(l2_end_block.into()).await?.unwrap();
@@ -694,6 +702,14 @@ impl OPSuccinctDataFetcher {
             l2_claim_hash: l2_claim_hash.0.into(),
         };
         let claimed_l2_output_root = keccak256(l2_claim_encoded.abi_encode());
+        tracing::debug!(
+            "Computed claimed output root: block={} claim_hash={} state_root={} storage_hash={} claimed_output_root={}",
+            l2_end_block,
+            l2_claim_hash,
+            l2_claim_state_root,
+            l2_claim_storage_hash,
+            claimed_l2_output_root
+        );
 
         let l1_beacon_address = self
             .rpc_config

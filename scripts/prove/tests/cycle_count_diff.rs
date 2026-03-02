@@ -20,6 +20,8 @@ fn elf_label() -> &'static str {
             "celestia-range-elf-embedded"
         } else if #[cfg(feature = "eigenda")] {
             "eigenda-range-elf-embedded"
+        } else if #[cfg(feature = "altda")] {
+            "altda-range-elf-embedded"
         } else {
             "range-elf-embedded"
         }

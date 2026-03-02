@@ -142,7 +142,7 @@ deploy-mock-verifier env_file=".env":
     cd contracts
 
     VERIFY=""
-    if [ $ETHERSCAN_API_KEY != "" ]; then
+    if [ -n "${ETHERSCAN_API_KEY:-}" ]; then
       VERIFY="--verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY"
     fi
     
@@ -157,13 +157,25 @@ deploy-oracle env_file=".env" *features='':
     #!/usr/bin/env bash
     set -euo pipefail
     
-    # First fetch rollup config using the env file
+    FETCH_L2OO_BIN="target/release/fetch-l2oo-config"
+
+    # Build fetch-l2oo-config only when needed, then run the binary directly.
     if [ -z "{{features}}" ]; then
-        RUST_LOG=info cargo run --bin fetch-l2oo-config --release -- --env-file {{env_file}}
+        if [ ! -x "$FETCH_L2OO_BIN" ]; then
+            if ! cargo build --bin fetch-l2oo-config --release --frozen; then
+                echo "Frozen build failed; retrying with network to warm cache..."
+                cargo build --bin fetch-l2oo-config --release --locked
+            fi
+        fi
     else
-        echo "Fetching rollup config with features: {{features}}"
-        RUST_LOG=info cargo run --bin fetch-l2oo-config --release --features {{features}} -- --env-file {{env_file}}
+        echo "Building fetch-l2oo-config with features: {{features}}"
+        if ! cargo build --bin fetch-l2oo-config --release --features {{features}} --frozen; then
+            echo "Frozen build failed; retrying with network to warm cache..."
+            cargo build --bin fetch-l2oo-config --release --features {{features}} --locked
+        fi
     fi
+    OP_SUCCINCT_L2_OUTPUT_ORACLE_CONFIG_PATH="$PWD/contracts/opsuccinctl2ooconfig.json" \
+        RUST_LOG=info "$FETCH_L2OO_BIN" --env-file {{env_file}}
     
     # Load environment variables
     source {{env_file}}
@@ -172,7 +184,7 @@ deploy-oracle env_file=".env" *features='':
     cd contracts
 
     VERIFY=""
-    if [ "$ETHERSCAN_API_KEY" != "" ]; then
+    if [ -n "${ETHERSCAN_API_KEY:-}" ]; then
       VERIFY="--verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY"
     fi
     
@@ -192,13 +204,25 @@ upgrade-oracle env_file=".env" *features='':
     #!/usr/bin/env bash
     set -euo pipefail
     
-    # First fetch rollup config using the env file
+    FETCH_L2OO_BIN="target/release/fetch-l2oo-config"
+
+    # Build fetch-l2oo-config only when needed, then run the binary directly.
     if [ -z "{{features}}" ]; then
-        RUST_LOG=info cargo run --bin fetch-l2oo-config --release -- --env-file {{env_file}}
+        if [ ! -x "$FETCH_L2OO_BIN" ]; then
+            if ! cargo build --bin fetch-l2oo-config --release --frozen; then
+                echo "Frozen build failed; retrying with network to warm cache..."
+                cargo build --bin fetch-l2oo-config --release --locked
+            fi
+        fi
     else
-        echo "Fetching rollup config with features: {{features}}"
-        RUST_LOG=info cargo run --bin fetch-l2oo-config --release --features {{features}} -- --env-file {{env_file}}
+        echo "Building fetch-l2oo-config with features: {{features}}"
+        if ! cargo build --bin fetch-l2oo-config --release --features {{features}} --frozen; then
+            echo "Frozen build failed; retrying with network to warm cache..."
+            cargo build --bin fetch-l2oo-config --release --features {{features}} --locked
+        fi
     fi
+    OP_SUCCINCT_L2_OUTPUT_ORACLE_CONFIG_PATH="$PWD/contracts/opsuccinctl2ooconfig.json" \
+        RUST_LOG=info "$FETCH_L2OO_BIN" --env-file {{env_file}}
     
     # Load environment variables
     source {{env_file}}
@@ -259,7 +283,7 @@ deploy-dispute-game-factory env_file=".env":
     forge install
 
     VERIFY=""
-    if [ -n "$ETHERSCAN_API_KEY" ]; then
+    if [ -n "${ETHERSCAN_API_KEY:-}" ]; then
       VERIFY="--verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY"
     fi
     
@@ -308,13 +332,25 @@ add-config config_name env_file=".env" *features='':
     #!/usr/bin/env bash
     set -euo pipefail
     
-    # First fetch rollup config using the env file
+    FETCH_L2OO_BIN="target/release/fetch-l2oo-config"
+
+    # Build fetch-l2oo-config only when needed, then run the binary directly.
     if [ -z "{{features}}" ]; then
-        RUST_LOG=info cargo run --bin fetch-l2oo-config --release -- --env-file {{env_file}}
+        if [ ! -x "$FETCH_L2OO_BIN" ]; then
+            if ! cargo build --bin fetch-l2oo-config --release --frozen; then
+                echo "Frozen build failed; retrying with network to warm cache..."
+                cargo build --bin fetch-l2oo-config --release --locked
+            fi
+        fi
     else
-        echo "Fetching rollup config with features: {{features}}"
-        RUST_LOG=info cargo run --bin fetch-l2oo-config --release --features {{features}} -- --env-file {{env_file}}
+        echo "Building fetch-l2oo-config with features: {{features}}"
+        if ! cargo build --bin fetch-l2oo-config --release --features {{features}} --frozen; then
+            echo "Frozen build failed; retrying with network to warm cache..."
+            cargo build --bin fetch-l2oo-config --release --features {{features}} --locked
+        fi
     fi
+    OP_SUCCINCT_L2_OUTPUT_ORACLE_CONFIG_PATH="$PWD/contracts/opsuccinctl2ooconfig.json" \
+        RUST_LOG=info "$FETCH_L2OO_BIN" --env-file {{env_file}}
     
     # Load environment variables
     source {{env_file}}

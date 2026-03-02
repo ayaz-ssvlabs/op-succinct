@@ -19,7 +19,7 @@ use kona_proof::{
     BootInfo, FlushableCache,
 };
 use spin::RwLock;
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::{
     client::{advance_to_target, fetch_safe_head_hash},
@@ -48,6 +48,15 @@ where
     };
 
     let boot_clone = boot.clone();
+    debug!(
+        target: "client",
+        "Loaded BootInfo: l1_head={} agreed_l2_output_root={} claimed_l2_output_root={} claimed_l2_block_number={} chain_id={}",
+        boot.l1_head,
+        boot.agreed_l2_output_root,
+        boot.claimed_l2_output_root,
+        boot.claimed_l2_block_number,
+        boot.chain_id
+    );
 
     let rollup_config = Arc::new(boot.rollup_config);
     let safe_head_hash = fetch_safe_head_hash(oracle.as_ref(), boot.agreed_l2_output_root).await?;
@@ -60,6 +69,12 @@ where
     let safe_head = l2_provider
         .header_by_hash(safe_head_hash)
         .map(|header| Sealed::new_unchecked(header, safe_head_hash))?;
+    debug!(
+        target: "client",
+        "Resolved safe head header from agreed output root: safe_head_hash={} safe_head_number={}",
+        safe_head_hash,
+        safe_head.number
+    );
 
     // If the claimed L2 block number is less than the safe head of the L2 chain, the claim is
     // invalid.
@@ -150,6 +165,14 @@ pub trait WitnessExecutor {
             Some(boot.claimed_l2_block_number),
         )
         .await?;
+        debug!(
+            target: "client",
+            "advance_to_target completed: produced_safe_head_number={} produced_safe_head_hash={} produced_output_root={} claimed_output_root={}",
+            safe_head.block_info.number,
+            safe_head.block_info.hash,
+            output_root,
+            boot.claimed_l2_output_root
+        );
         #[cfg(target_os = "zkvm")]
         println!("cycle-tracker-report-end: block-execution-and-derivation");
 
